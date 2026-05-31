@@ -26,18 +26,20 @@ jobs:
           if old in s:
               s = s.replace(old, new, 1)
 
-          light_fix = '''
-/* Ajuste de contraste do modal de aniversariantes no modo claro */
-[data-theme="light"] #modal-aniversarios > div {
-  background: #FFFFFF !important;
-  color: #0F172A !important;
-  border-color: #CBD5E1 !important;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;
-}
-[data-theme="light"] #modal-aniversarios [style*="color:var(--text)"] { color: #0F172A !important; }
-[data-theme="light"] #modal-aniversarios [style*="color:var(--text-muted)"] { color: #475569 !important; }
-[data-theme="light"] #modal-aniversarios .btn-ghost { color: #334155; }
-'''
+          light_fix = '\n'.join([
+              '',
+              '/* Ajuste de contraste do modal de aniversariantes no modo claro */',
+              '[data-theme="light"] #modal-aniversarios > div {',
+              '  background: #FFFFFF !important;',
+              '  color: #0F172A !important;',
+              '  border-color: #CBD5E1 !important;',
+              '  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;',
+              '}',
+              '[data-theme="light"] #modal-aniversarios [style*="color:var(--text)"] { color: #0F172A !important; }',
+              '[data-theme="light"] #modal-aniversarios [style*="color:var(--text-muted)"] { color: #475569 !important; }',
+              '[data-theme="light"] #modal-aniversarios .btn-ghost { color: #334155; }',
+              ''
+          ])
           marker = '/* ── TABS (DOCK-STYLE) ── */'
           if 'Ajuste de contraste do modal de aniversariantes' not in s and marker in s:
               s = s.replace(marker, light_fix + '\n' + marker, 1)
@@ -45,21 +47,23 @@ jobs:
 
           login = Path('_login.html')
           s = login.read_text(encoding='utf-8')
-          login_fix = '''
-/* Contraste do logo no login em modo claro */
-[data-theme="light"] .login-logo-bg {
-  background: radial-gradient(circle at 38% 32%, #0F766E 0%, #0B4F49 72%);
-  border-color: rgba(15, 118, 110, 0.42);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255,255,255,0.18);
-}
-[data-theme="light"] .login-logo-ring .app-logo-img {
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.36)) contrast(1.08) saturate(1.08);
-}
-[data-theme="light"] .login-logo-ring::before,
-[data-theme="light"] .login-logo-ring::after {
-  border-color: rgba(15, 118, 110, 0.22);
-}
-'''
+          login_fix = '\n'.join([
+              '',
+              '/* Contraste do logo no login em modo claro */',
+              '[data-theme="light"] .login-logo-bg {',
+              '  background: radial-gradient(circle at 38% 32%, #0F766E 0%, #0B4F49 72%);',
+              '  border-color: rgba(15, 118, 110, 0.42);',
+              '  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255,255,255,0.18);',
+              '}',
+              '[data-theme="light"] .login-logo-ring .app-logo-img {',
+              '  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.36)) contrast(1.08) saturate(1.08);',
+              '}',
+              '[data-theme="light"] .login-logo-ring::before,',
+              '[data-theme="light"] .login-logo-ring::after {',
+              '  border-color: rgba(15, 118, 110, 0.22);',
+              '}',
+              ''
+          ])
           marker = '/* ── Ícones de input — visíveis em dark e light ── */'
           if 'Contraste do logo no login em modo claro' not in s and marker in s:
               s = s.replace(marker, login_fix + '\n' + marker, 1)

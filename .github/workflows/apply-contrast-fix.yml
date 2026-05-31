@@ -1,0 +1,78 @@
+name: Apply contrast fix
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch contrast styles
+        shell: python
+        run: |
+          from pathlib import Path
+
+          escola = Path('_escola-dominical.html')
+          s = escola.read_text(encoding='utf-8')
+          old = 'background:var(--surface,#1c1c2e);border-radius:16px;padding:24px;width:90%;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.5);position:relative;border:1px solid var(--border,rgba(255,255,255,0.1))'
+          new = 'background:var(--bg-elevated,var(--surface,#1c1c2e));color:var(--text);border-radius:16px;padding:24px;width:90%;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg,0 24px 60px rgba(0,0,0,0.5));position:relative;border:1px solid var(--border2,var(--border,rgba(255,255,255,0.1)))'
+          if old in s:
+              s = s.replace(old, new, 1)
+          light_fix = '''
+/* Ajuste de contraste do modal de aniversariantes no modo claro */
+[data-theme="light"] #modal-aniversarios > div {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;
+}
+[data-theme="light"] #modal-aniversarios [style*="color:var(--text)"] { color: #0F172A !important; }
+[data-theme="light"] #modal-aniversarios [style*="color:var(--text-muted)"] { color: #475569 !important; }
+[data-theme="light"] #modal-aniversarios .btn-ghost { color: #334155; }
+'''
+          marker = '/* ── TABS (DOCK-STYLE) ── */'
+          if 'Ajuste de contraste do modal de aniversariantes' not in s and marker in s:
+              s = s.replace(marker, light_fix + '\n' + marker, 1)
+          escola.write_text(s, encoding='utf-8')
+
+          login = Path('_login.html')
+          s = login.read_text(encoding='utf-8')
+          login_fix = '''
+/* Contraste do logo no login em modo claro */
+[data-theme="light"] .login-logo-bg {
+  background: radial-gradient(circle at 38% 32%, #0F766E 0%, #0B4F49 72%);
+  border-color: rgba(15, 118, 110, 0.42);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+[data-theme="light"] .login-logo-ring .app-logo-img {
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.36)) contrast(1.08) saturate(1.08);
+}
+[data-theme="light"] .login-logo-ring::before,
+[data-theme="light"] .login-logo-ring::after {
+  border-color: rgba(15, 118, 110, 0.22);
+}
+'''
+          marker = '/* ── Ícones de input — visíveis em dark e light ── */'
+          if 'Contraste do logo no login em modo claro' not in s and marker in s:
+              s = s.replace(marker, login_fix + '\n' + marker, 1)
+          login.write_text(s, encoding='utf-8')
+      - name: Commit patched files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _escola-dominical.html _login.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "fix: refine light mode contrast"
+            git push
+          fi

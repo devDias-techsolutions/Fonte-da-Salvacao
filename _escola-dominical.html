@@ -190,6 +190,18 @@
                      color:var(--text-muted); line-height:1.55; margin-bottom:14px; }
 
 
+
+/* Ajuste de contraste do modal de aniversariantes no modo claro */
+[data-theme="light"] #modal-aniversarios > div {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;
+}
+[data-theme="light"] #modal-aniversarios [style*="color:var(--text)"] { color: #0F172A !important; }
+[data-theme="light"] #modal-aniversarios [style*="color:var(--text-muted)"] { color: #475569 !important; }
+[data-theme="light"] #modal-aniversarios .btn-ghost { color: #334155; }
+
 /* ── TABS (DOCK-STYLE) ── */
 .ed-tabs-wrap {
   background: var(--bg-glass-strong);
@@ -3632,7 +3644,7 @@ function _bdCake(dateStr) {
 // ─── Modal Aniversários ────────────────────────────────────
 function _modalAniversarios() {
   return '<div id="modal-aniversarios" onclick="if(event.target===this)edCloseModalAniversarios()" style="display:none">'+
-    '<div style="background:var(--surface,#1c1c2e);border-radius:16px;padding:24px;width:90%;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.5);position:relative;border:1px solid var(--border,rgba(255,255,255,0.1))">'+
+    '<div style="background:var(--bg-elevated,var(--surface,#1c1c2e));color:var(--text);border-radius:16px;padding:24px;width:90%;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg,0 24px 60px rgba(0,0,0,0.5));position:relative;border:1px solid var(--border2,var(--border,rgba(255,255,255,0.1)))">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">'+
         '<div style="font-size:16px;font-weight:800;color:var(--text)">Aniversários da Semana</div>'+
         '<button class="btn btn-ghost btn-sm" style="width:34px;padding:0;flex-shrink:0;font-size:16px;line-height:1" onclick="edCloseModalAniversarios()">✕</button>'+

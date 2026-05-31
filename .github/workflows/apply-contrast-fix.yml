@@ -1,8 +1,6 @@
 name: Apply contrast fix
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,15 +8,15 @@ permissions:
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Patch contrast styles
-        shell: python
+        shell: bash
         run: |
+          python3 <<'PY'
           from pathlib import Path
 
           escola = Path('_escola-dominical.html')
@@ -27,6 +25,7 @@ jobs:
           new = 'background:var(--bg-elevated,var(--surface,#1c1c2e));color:var(--text);border-radius:16px;padding:24px;width:90%;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg,0 24px 60px rgba(0,0,0,0.5));position:relative;border:1px solid var(--border2,var(--border,rgba(255,255,255,0.1)))'
           if old in s:
               s = s.replace(old, new, 1)
+
           light_fix = '''
 /* Ajuste de contraste do modal de aniversariantes no modo claro */
 [data-theme="light"] #modal-aniversarios > div {
@@ -65,7 +64,10 @@ jobs:
           if 'Contraste do logo no login em modo claro' not in s and marker in s:
               s = s.replace(marker, login_fix + '\n' + marker, 1)
           login.write_text(s, encoding='utf-8')
+          PY
+
       - name: Commit patched files
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

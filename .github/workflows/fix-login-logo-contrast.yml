@@ -25,21 +25,24 @@ jobs:
           p = Path('_login.html')
           s = p.read_text(encoding='utf-8')
 
-          old_block = '''
-/* Contraste do logo no login em modo claro */
-[data-theme="light"] .login-logo-bg {
-  background: radial-gradient(circle at 38% 32%, #0F766E 0%, #0B4F49 72%);
-  border-color: rgba(15, 118, 110, 0.42);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255,255,255,0.18);
-}
-[data-theme="light"] .login-logo-ring .app-logo-img {
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.36)) contrast(1.08) saturate(1.08);
-}
-[data-theme="light"] .login-logo-ring::before,
-[data-theme="light"] .login-logo-ring::after {
-  border-color: rgba(15, 118, 110, 0.22);
-}
-'''
+          old_block = '\n'.join([
+              '',
+              '/* Contraste do logo no login em modo claro */',
+              '[data-theme="light"] .login-logo-bg {',
+              '  background: radial-gradient(circle at 38% 32%, #0F766E 0%, #0B4F49 72%);',
+              '  border-color: rgba(15, 118, 110, 0.42);',
+              '  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255,255,255,0.18);',
+              '}',
+              '[data-theme="light"] .login-logo-ring .app-logo-img {',
+              '  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.36)) contrast(1.08) saturate(1.08);',
+              '}',
+              '[data-theme="light"] .login-logo-ring::before,',
+              '[data-theme="light"] .login-logo-ring::after {',
+              '  border-color: rgba(15, 118, 110, 0.22);',
+              '}',
+              ''
+          ])
+
           new_block = '\n'.join([
               '',
               '/* Contraste forte do logo no login */',

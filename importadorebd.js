@@ -2,10 +2,10 @@
 //  ImportadorEBD.gs — Funções de importação em lote
 //  Adicione este arquivo ao projeto GAS da Escola Dominical
 //  DEPENDE de: Util (já existente no projeto)
-//  v1.1 · AD Fonte da Salvação
+//  v1.2 · AD Fonte da Salvação
 // ═══════════════════════════════════════════════════════════
 
-// ── Helpers locais que delegam ao Util do sistema ──────────
+// ── Helpers locais ─────────────────────────────────────────
 var _Imp = {
   uuid: function() { return Util.uuid ? Util.uuid() : Utilities.getUuid(); },
   now:  function() { return Util.now  ? Util.now()  : Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss'); },
@@ -14,9 +14,10 @@ var _Imp = {
     try {
       var rows = Util.sheetToObjects(sheetName);
       var nLow = (nome||'').trim().toLowerCase();
-      return rows.find(function(r) {
-        return String(r.Nome||'').trim().toLowerCase() === nLow;
-      }) || null;
+      for (var i = 0; i < rows.length; i++) {
+        if (String(rows[i].Nome||'').trim().toLowerCase() === nLow) return rows[i];
+      }
+      return null;
     } catch(e) { return null; }
   },
 
@@ -24,9 +25,10 @@ var _Imp = {
     try {
       var rows = Util.sheetToObjects('Classes');
       var nLow = (nome||'').trim().toLowerCase();
-      return rows.find(function(r) {
-        return String(r.Nome||'').trim().toLowerCase() === nLow;
-      }) || null;
+      for (var i = 0; i < rows.length; i++) {
+        if (String(rows[i].Nome||'').trim().toLowerCase() === nLow) return rows[i];
+      }
+      return null;
     } catch(e) { return null; }
   },
 
@@ -34,11 +36,24 @@ var _Imp = {
   err: function(msg)  { return { success: false, error: String(msg) }; }
 };
 
-// ══════════════════════════════════════════════════════════
-//  ed_listarClasses — expõe lista de classes para o mapeamento
-// ══════════════════════════════════════════════════════════
-function ed_listarClasses(token) {
+// ── Wrapper seguro (mesmo padrão do sistema principal) ─────
+function _impSafe(fn) {
   try {
+    var r = fn();
+    if (r === null || r === undefined) return { success: false, error: 'Resposta vazia.' };
+    return JSON.parse(JSON.stringify(r));
+  } catch(e) {
+    return { success: false, error: e.message || 'Erro interno.' };
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  LISTAR CLASSES para o mapeamento do importador
+//  — usa nome diferente para não colidir com ed_listarClasses
+//    do módulo principal
+// ══════════════════════════════════════════════════════════
+function imp_listarClasses() {
+  return _impSafe(function() {
     var rows = Util.sheetToObjects('Classes').filter(function(r) {
       var a = r.Ativo;
       return !(a === false || String(a).toLowerCase() === 'false' || a === 0);
@@ -46,20 +61,55 @@ function ed_listarClasses(token) {
     return _Imp.ok(rows.map(function(r) {
       return { ID: String(r.ID||''), Nome: String(r.Nome||'') };
     }));
-  } catch(e) { return _Imp.err(e.message); }
+  });
 }
 
 // ══════════════════════════════════════════════════════════
-//  ed_importarAluno(dados, nomeTurmaNovaOuNull)
+//  LIMPAR DADOS FICTÍCIOS
+//  Apaga TODOS os registros das abas operacionais.
+//  Mantém cabeçalhos e abas de configuração (Config, PontosExtras).
+//  ATENÇÃO: irreversível — use apenas antes da importação real.
 // ══════════════════════════════════════════════════════════
-function ed_importarAluno(dados, nomeTurmaNova) {
-  try {
+function imp_limparDados(token) {
+  return _impSafe(function() {
+    // Valida sessão — exige pelo menos perfil secretario/admin
+    var sess = Auth._auth(token);
+    if (sess.perfil === 'professor') return _Imp.err('Sem permissão para limpar dados.');
+
+    // Abas a limpar (mantém linha 1 = cabeçalho)
+    var abas = ['Classes', 'Alunos', 'Professores', 'Aulas', 'Chamadas', 'ChamadasInfo'];
+
+    var relatorio = [];
+    abas.forEach(function(nomeAba) {
+      try {
+        var ss    = SpreadsheetApp.getActiveSpreadsheet();
+        var sheet = ss.getSheetByName(nomeAba);
+        if (!sheet) { relatorio.push(nomeAba + ': aba não encontrada'); return; }
+        var lastRow = sheet.getLastRow();
+        if (lastRow <= 1) { relatorio.push(nomeAba + ': já vazia'); return; }
+        // Apaga da linha 2 até a última (preserva cabeçalho na linha 1)
+        sheet.deleteRows(2, lastRow - 1);
+        relatorio.push(nomeAba + ': ' + (lastRow - 1) + ' registros removidos');
+      } catch(e) {
+        relatorio.push(nomeAba + ': ERRO — ' + e.message);
+      }
+    });
+
+    return _Imp.ok({ mensagem: 'Limpeza concluída.', detalhes: relatorio });
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  IMPORTAR ALUNO
+// ══════════════════════════════════════════════════════════
+function imp_importarAluno(dados, nomeTurmaNova) {
+  return _impSafe(function() {
     if (!dados || !dados.Nome || !dados.Nome.trim())
       return _Imp.err('Nome obrigatório.');
 
     // Anti-duplicata
     if (_Imp.findByNome('Alunos', dados.Nome))
-      return _Imp.err('Aluno já existe: ' + dados.Nome);
+      return _Imp.err('Duplicado ignorado: ' + dados.Nome);
 
     // Resolver ClasseID
     var classeID = dados.ClasseID || '';
@@ -80,20 +130,20 @@ function ed_importarAluno(dados, nomeTurmaNova) {
       CriadoEm:   dados.CriadoEm || _Imp.now()
     });
     return _Imp.ok({ id: id, nome: dados.Nome });
-  } catch(e) { return _Imp.err(e.message); }
+  });
 }
 
 // ══════════════════════════════════════════════════════════
-//  ed_importarProfessor(dados, nomeTurmaNovaOuNull)
+//  IMPORTAR PROFESSOR
 // ══════════════════════════════════════════════════════════
-function ed_importarProfessor(dados, nomeTurmaNova) {
-  try {
+function imp_importarProfessor(dados, nomeTurmaNova) {
+  return _impSafe(function() {
     if (!dados || !dados.Nome || !dados.Nome.trim())
       return _Imp.err('Nome obrigatório.');
 
     // Anti-duplicata
     if (_Imp.findByNome('Professores', dados.Nome))
-      return _Imp.err('Professor já existe: ' + dados.Nome);
+      return _Imp.err('Duplicado ignorado: ' + dados.Nome);
 
     // Resolver ClasseID
     var classeID = dados.ClasseID || '';
@@ -117,7 +167,7 @@ function ed_importarProfessor(dados, nomeTurmaNova) {
       CriadoEm:     dados.CriadoEm || _Imp.now()
     });
     return _Imp.ok({ id: id, nome: dados.Nome });
-  } catch(e) { return _Imp.err(e.message); }
+  });
 }
 
 // ── Criar classe nova se não existir ─────────────────────
@@ -128,14 +178,15 @@ function _criarClasseSeNecessario(nomeClasse) {
   var id = _Imp.uuid();
   try {
     Util.insertRow('Classes', {
-      ID:        id,
-      Nome:      nomeClasse.trim(),
-      Descricao: 'Importado do sistema antigo',
-      Ativo:     true,
-      CriadoEm: _Imp.now()
+      ID:          id,
+      Nome:        nomeClasse.trim(),
+      FaixaEtaria: '',
+      LicaoCPAD:   '',
+      Ativo:       true,
+      CriadoEm:   _Imp.now()
     });
   } catch(e) {
-    Logger.log('Erro ao criar classe "'+nomeClasse+'": '+e.message);
+    Logger.log('Erro ao criar classe "' + nomeClasse + '": ' + e.message);
     return '';
   }
   return id;

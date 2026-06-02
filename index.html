@@ -809,13 +809,14 @@ var VIEWS = {
   'recuperar-senha': 'renderRecuperarSenha',
   home:              'renderHome',
   usuarios:          'renderUsuarios',
-  'escola-dominical':'renderEscolaDominical'
+  'escola-dominical':'renderEscolaDominical',
+  'membros':         'renderMembros'
 };
 
 function navigateTo(view, params) {
   App.currentView = view;
 
-  var authRequired = ['home', 'usuarios', 'escola-dominical'];
+  var authRequired = ['home', 'usuarios', 'escola-dominical', 'membros'];
   if (authRequired.indexOf(view) !== -1 && !App.session) {
     navigateTo('login');
     return;
@@ -1078,6 +1079,7 @@ if (document.readyState === 'loading') {
 <?!= include('_recuperar-senha'); ?>
 <?!= include('_home'); ?>
 <?!= include('_escola-dominical'); ?>
+<?!= include('_membros'); ?>
 
 </body>
 </html>

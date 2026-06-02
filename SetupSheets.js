@@ -60,6 +60,15 @@ var SetupSheets = (function () {
 
     Config: [
       'Chave', 'Valor', 'Descricao', 'AtualizadoEm'
+    ],
+
+    Membros: [
+      'id', 'rol', 'nome', 'sexo', 'nascimento',
+      'nomeMae', 'nomePai', 'estadoCivil',
+      'batismo', 'Igreja', 'funcao',
+      'rua', 'numero', 'bairro', 'cidade', 'estado', 'cep',
+      'celular', 'email', 'rg', 'cpf',
+      'foto', 'fotoZoom', 'fotoX', 'fotoY', 'ativo'
     ]
   };
 
@@ -74,7 +83,8 @@ var SetupSheets = (function () {
     Chamadas:      '#2a1a1a',
     ChamadasInfo:  '#1a2a3a',
     PontosExtras:  '#1a2a2a',
-    Config:        '#2a2a2a'
+    Config:        '#2a2a2a',
+    Membros:       '#00695C'
   };
 
   // ─────────────────────────────────────────────────────────────

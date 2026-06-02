@@ -886,25 +886,43 @@ var EscolaDominical = (function () {
   // (WhatsApp removido — alertas agora via GmailApp)
 
   function _enviarEmail(emailDest, assunto, corpo) {
-    if (!emailDest || !/\S+@\S+\.\S+/.test(emailDest)) return { ok: false, erro: 'Email inválido: ' + emailDest };
+    // corpo deve ser plaintext puro sem emojis fora do BMP (U+FFFF+)
+    // htmlBody gerado aqui via escape seguro
+    if (!emailDest || !/\S+@\S+\.\S+/.test(emailDest)) return { ok: false, erro: 'Email invalido: ' + emailDest };
     try {
-      GmailApp.sendEmail(emailDest, assunto, corpo, {
-        htmlBody: corpo.replace(/\n/g, '<br>').replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-      });
+      var htmlBody = '<meta charset="UTF-8">' +
+        corpo
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>')
+          .replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+      GmailApp.sendEmail(emailDest, assunto, corpo, { htmlBody: htmlBody });
+      return { ok: true };
+    } catch(e) { return { ok: false, erro: e.message }; }
+  }
+
+  function _enviarEmailHtml(emailDest, assunto, corpoPlain, htmlBody) {
+    // Use este quando quiser emojis: passe-os apenas no htmlBody como entidades &#x...
+    // corpoPlain deve ser ASCII puro (fallback para clientes sem HTML)
+    if (!emailDest || !/\S+@\S+\.\S+/.test(emailDest)) return { ok: false, erro: 'Email invalido: ' + emailDest };
+    try {
+      GmailApp.sendEmail(emailDest, assunto, corpoPlain, { htmlBody: htmlBody });
       return { ok: true };
     } catch(e) { return { ok: false, erro: e.message }; }
   }
 
   function _alertaDiarioFn() {
     var cfg = _getConfigAlertas();
-    if (!cfg.email_ativo) return;
+    if (!cfg.email_ativo) return { enviados: 0, motivo: 'email_inativo' };
     var today = new Date();
     var alunos  = _safeSheetObjects('Alunos').filter(function(a){ return _isAtivo(a.Ativo) && _isBirthdayOn(a.DataNasc, today); });
     var profs   = _safeSheetObjects('Professores').filter(function(p){ return _isAtivo(p.Ativo) && _isBirthdayOn(p.DataNasc, today); });
     var classes = _safeSheetObjects('Classes');
-    if (!alunos.length && !profs.length) return;
+    if (!alunos.length && !profs.length) return { enviados: 0, motivo: 'sem_aniversariantes' };
 
-    var assunto = '🎂 Escola Dominical – Aniversário(s) Hoje!';
+    var assunto = 'Escola Dominical - Aniversario(s) Hoje!';
+    var enviados = 0;
 
     // Avisar professor da turma sobre aluno aniversariante
     if (cfg.alerta_dia) {
@@ -913,11 +931,18 @@ var EscolaDominical = (function () {
         var anivTurma = alunos.filter(function(a){ return a.ClasseID === prof.ClasseID; });
         if (!anivTurma.length) return;
         var cl = (classes.filter(function(c){ return c.ID === prof.ClasseID; })[0] || {}).Nome || 'sua turma';
-        var msg = '🎂 *Escola Dominical – Aniversário Hoje!*\n\n';
-        msg += 'Olá, ' + prof.Nome.split(' ')[0] + '! Hoje é aniversário de:\n\n';
-        anivTurma.forEach(function(a){ msg += '🎂 *' + a.Nome + '* 🥳\n'; });
-        msg += '\nNão esqueça de parabenizar! ❤️';
-        _enviarEmail(prof.Email, assunto, msg);
+        var nomes = anivTurma.map(function(a){ return a.Nome; }).join(', ');
+        var plain = 'Escola Dominical - Aniversario Hoje!\n\n' +
+          'Ola, ' + prof.Nome.split(' ')[0] + '! Hoje e aniversario de:\n\n' +
+          anivTurma.map(function(a){ return '* ' + a.Nome + ' *'; }).join('\n') +
+          '\n\nNao esqueca de parabenizar!';
+        var html = '<meta charset="UTF-8">' +
+          '<p><strong>&#x1F382; Escola Dominical &#x2013; Anivers&#xe1;rio Hoje!</strong></p>' +
+          '<p>Ol&#xe1;, ' + prof.Nome.split(' ')[0] + '! Hoje &#xe9; anivers&#xe1;rio de:</p><ul>' +
+          anivTurma.map(function(a){ return '<li><strong>' + a.Nome + '</strong> &#x1F973;</li>'; }).join('') +
+          '</ul><p>N&#xe3;o esque&#xe7;a de parabenizar! &#x2764;&#xfe0f;</p>';
+        var r = _enviarEmailHtml(prof.Email, assunto, plain, html);
+        if (r.ok) enviados++;
       });
     }
 
@@ -926,10 +951,17 @@ var EscolaDominical = (function () {
     dest.forEach(function(r) {
       if (!r.email || !r.alertaDia) return;
       var todos = alunos.concat(profs);
-      var msg = '🎂 *Escola Dominical – Aniversário(s) Hoje!*\n\n';
-      todos.forEach(function(p){ msg += '🎂 *' + p.Nome + '* 🥳\n'; });
-      _enviarEmail(r.email, assunto, msg);
+      var plain2 = 'Escola Dominical - Aniversario(s) Hoje!\n\n' +
+        todos.map(function(p){ return '* ' + p.Nome + ' *'; }).join('\n');
+      var html2 = '<meta charset="UTF-8">' +
+        '<p><strong>&#x1F382; Escola Dominical &#x2013; Anivers&#xe1;rio(s) Hoje!</strong></p><ul>' +
+        todos.map(function(p){ return '<li><strong>' + p.Nome + '</strong> &#x1F973;</li>'; }).join('') +
+        '</ul>';
+      var res = _enviarEmailHtml(r.email, assunto, plain2, html2);
+      if (res.ok) enviados++;
     });
+
+    return { enviados: enviados };
   }
 
   function _alertaSegundaFeiraFn() {
@@ -941,7 +973,7 @@ var EscolaDominical = (function () {
     var alunos   = _safeSheetObjects('Alunos').filter(function(a){ return _isAtivo(a.Ativo); });
     var todosProfs = _safeSheetObjects('Professores').filter(function(p){ return _isAtivo(p.Ativo); });
     var days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-    var assunto = '🎂 Escola Dominical – Aniversariantes da Semana';
+    var assunto = 'Escola Dominical - Aniversariantes da Semana';
 
     // Para cada professor, mandar lista da turma dele
     todosProfs.forEach(function(prof) {
@@ -956,11 +988,16 @@ var EscolaDominical = (function () {
       }
       if (!anivTurma.length) return;
       var cl = (classes.filter(function(c){ return c.ID === prof.ClasseID; })[0] || {}).Nome || 'sua turma';
-      var msg = '🎂 *Escola Dominical – Aniversariantes da Semana*\n\n';
-      msg += 'Olá, ' + prof.Nome.split(' ')[0] + '! Esta semana temos aniversariantes em *' + cl + '*:\n\n';
-      anivTurma.forEach(function(a){ msg += '🎂 ' + a.nome + ' – ' + a.diaLabel + '\n'; });
-      msg += '\nNão esqueça de desejar parabéns! 🥳';
-      _enviarEmail(prof.Email, assunto, msg);
+      var plain1 = 'Escola Dominical - Aniversariantes da Semana\n\n' +
+        'Ola, ' + prof.Nome.split(' ')[0] + '! Esta semana temos aniversariantes em ' + cl + ':\n\n' +
+        anivTurma.map(function(a){ return a.nome + ' - ' + a.diaLabel; }).join('\n') +
+        '\n\nNao esqueca de desejar parabens!';
+      var html1 = '<meta charset="UTF-8">' +
+        '<p><strong>&#x1F382; Escola Dominical &#x2013; Aniversariantes da Semana</strong></p>' +
+        '<p>Ol&#xe1;, ' + prof.Nome.split(' ')[0] + '! Esta semana temos aniversariantes em <strong>' + cl + '</strong>:</p><ul>' +
+        anivTurma.map(function(a){ return '<li><strong>' + a.nome + '</strong> &#x2013; ' + a.diaLabel + ' &#x1F973;</li>'; }).join('') +
+        '</ul><p>N&#xe3;o esque&#xe7;a de desejar parab&#xe9;ns!</p>';
+      _enviarEmailHtml(prof.Email, assunto, plain1, html1);
     });
 
     // Destinatários globais
@@ -975,10 +1012,13 @@ var EscolaDominical = (function () {
             todos.push({ nome: p.Nome, diaLabel: days[i]+' '+('0'+ref.getDate()).slice(-2)+'/'+('0'+(ref.getMonth()+1)).slice(-2) });
         });
       }
-      var msg = '🎂 *Escola Dominical – Aniversariantes da Semana*\n\n';
-      if (!todos.length) { msg += 'Nenhum aniversariante esta semana. 😊'; }
-      else { todos.forEach(function(p){ msg += '🎂 ' + p.nome + ' – ' + p.diaLabel + '\n'; }); }
-      _enviarEmail(r.email, assunto, msg);
+      var plain2 = 'Escola Dominical - Aniversariantes da Semana\n\n' +
+        (todos.length ? todos.map(function(p){ return p.nome + ' - ' + p.diaLabel; }).join('\n') : 'Nenhum aniversariante esta semana.');
+      var html2 = '<meta charset="UTF-8"><p><strong>&#x1F382; Escola Dominical &#x2013; Aniversariantes da Semana</strong></p>' +
+        (todos.length
+          ? '<ul>' + todos.map(function(p){ return '<li><strong>' + p.nome + '</strong> &#x2013; ' + p.diaLabel + ' &#x1F973;</li>'; }).join('') + '</ul>'
+          : '<p>Nenhum aniversariante esta semana. &#x1F60A;</p>');
+      _enviarEmailHtml(r.email, assunto, plain2, html2);
     });
   }
 
@@ -993,9 +1033,46 @@ var EscolaDominical = (function () {
   function dispararAlertaManual(token, tipo) {
     try {
       Auth._auth(token);
-      if (!_getConfigAlertas().email_ativo) return Util.err('Email não ativo. Configure e ative primeiro.');
-      if (tipo === 'dia')    _alertaDiarioFn();
-      else if (tipo === 'semana') _alertaSegundaFeiraFn();
+      var cfg = _getConfigAlertas();
+      if (!cfg.email_ativo) return Util.err('Email não ativo. Configure e ative primeiro.');
+
+      if (tipo === 'teste') {
+        // Envia email de confirmação para todos os destinatários globais com email válido,
+        // independente de haver aniversariantes. Serve apenas para validar a configuração.
+        var dest = (cfg.destinatarios || []).filter(function(d){ return d.email && /\S+@\S+\.\S+/.test(d.email); });
+        if (!dest.length) return Util.err('Nenhum destinatário global com email válido encontrado. Adicione e salve antes de testar.');
+        var assunto = '[Teste] Alertas Escola Dominical (AD Fonte da Salvacao)';
+        var enviados = 0;
+        dest.forEach(function(d) {
+          // plaintext: sem emojis fora do BMP para evitar encoding corrompido
+          var corpo = 'Teste de Email - Escola Dominical\n\n' +
+            'Ola, ' + (d.nome || 'destinatario') + '!\n\n' +
+            'Este e um email de teste do sistema de alertas de aniversarios.\n' +
+            'Se voce recebeu esta mensagem, a configuracao esta funcionando corretamente.\n\n' +
+            '-- Sistema AD Fonte da Salvacao';
+          // htmlBody: emojis como entidades hexadecimais (sem risco de encoding)
+          var html = '<meta charset="UTF-8">' +
+            '<p><strong>&#x2705; Teste de Email &#x2013; Escola Dominical</strong></p>' +
+            '<p>Ol&#xe1;, ' + (d.nome || 'destinat&#xe1;rio') + '!</p>' +
+            '<p>Este &#xe9; um email de teste do sistema de alertas de anivers&#xe1;rios.<br>' +
+            'Se voc&#xea; recebeu esta mensagem, a configura&#xe7;&#xe3;o est&#xe1; funcionando corretamente. &#x2705;</p>' +
+            '<p>&#x2014; Sistema AD Fonte da Salva&#xe7;&#xe3;o</p>';
+          var r = _enviarEmailHtml(d.email, assunto, corpo, html);
+          if (r.ok) enviados++;
+        });
+        if (!enviados) return Util.err('Falha ao enviar para os destinatários. Verifique se o script tem a permissão gmail.send autorizada.');
+        return Util.ok({ enviados: enviados });
+      }
+
+      if (tipo === 'dia') {
+        var res = _alertaDiarioFn();
+        if (res && res.motivo === 'sem_aniversariantes')
+          return Util.ok({ enviados: 0, aviso: 'Nenhum aniversariante hoje — nenhum email enviado.' });
+        return Util.ok(res || true);
+      } else if (tipo === 'semana') {
+        _alertaSegundaFeiraFn();
+        return Util.ok(true);
+      }
       return Util.ok(true);
     } catch(e) { return Util.err(e.message); }
   }

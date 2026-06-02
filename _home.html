@@ -434,7 +434,7 @@ function renderHome() {
       '<div class=\"modules-grid\">' +
         _moduleBtn('graduation-cap', 'Escola Dominical', 'Classes, alunos e chamadas', 'escola-dominical', false) +
         _moduleBtn('users',          'Usuários',         'Gestão de acesso e perfis',  isSec ? 'usuarios' : null, !isSec) +
-        _moduleBtn('contact',        'Membros',          'Cadastro de membros',         null, true, 'Em breve') +
+        _moduleBtn('contact',        'Membros',          'Cadastro de membros',         'membros', false, '') +
         _moduleBtn('wallet',         'Financeiro',       'Tesouraria e relatórios',     null, true, 'Em breve') +
         _moduleBtn('calendar-days',  'Agenda',           'Eventos e escalas',           null, true, 'Em breve') +
         _moduleBtn('bar-chart-2',    'Relatórios',       'Análises e exportação',       null, true, 'Em breve') +
@@ -477,6 +477,10 @@ function renderHome() {
       '<button class=\"bnav-item\" onclick=\"navigateTo(\'escola-dominical\')\">' +
         '<i data-lucide=\"graduation-cap\" style=\"width:20px;height:20px\"></i>' +
         '<span>E. Dominical</span>' +
+      '</button>' +
+      '<button class=\"bnav-item\" onclick=\"navigateTo(\'membros\')\">' +
+        '<i data-lucide=\"contact\" style=\"width:20px;height:20px\"></i>' +
+        '<span>Membros</span>' +
       '</button>' +
       (isSec ? '<button class=\"bnav-item\" onclick=\"navigateTo(\'usuarios\')\">' +
         '<i data-lucide=\"users\" style=\"width:20px;height:20px\"></i>' +

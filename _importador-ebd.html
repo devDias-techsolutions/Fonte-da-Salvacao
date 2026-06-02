@@ -6,35 +6,31 @@
 <title>Importador EBD</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* ═══════════════════════════════════════════
-   IMPORTADOR EBD — AD Fonte da Salvação
-   Design: dark industrial premium
-═══════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:       #0d0f14;
-  --bg2:      #13161e;
-  --bg3:      #1a1e28;
-  --bg4:      #222636;
-  --surface:  #1e2230;
-  --border:   rgba(255,255,255,0.08);
-  --border2:  rgba(255,255,255,0.13);
-  --text:     #eef0f6;
-  --text-sub: #8892a4;
-  --text-dim: #4a5568;
-  --teal:     #00c4b5;
-  --teal-dim: rgba(0,196,181,0.1);
-  --teal-glow:rgba(0,196,181,0.2);
-  --gold:     #f0b429;
-  --gold-dim: rgba(240,180,41,0.12);
-  --red:      #ff5e7a;
-  --red-dim:  rgba(255,94,122,0.1);
-  --green:    #34d399;
-  --green-dim:rgba(52,211,153,0.1);
-  --r:        10px;
-  --r-lg:     16px;
-  --mono:     'DM Mono', 'Fira Code', monospace;
+  --bg:        #0d0f14;
+  --bg2:       #13161e;
+  --bg3:       #1a1e28;
+  --bg4:       #222636;
+  --surface:   #1e2230;
+  --border:    rgba(255,255,255,0.08);
+  --border2:   rgba(255,255,255,0.13);
+  --text:      #eef0f6;
+  --text-sub:  #8892a4;
+  --text-dim:  #4a5568;
+  --teal:      #00c4b5;
+  --teal-dim:  rgba(0,196,181,0.1);
+  --teal-glow: rgba(0,196,181,0.2);
+  --gold:      #f0b429;
+  --gold-dim:  rgba(240,180,41,0.12);
+  --red:       #ff5e7a;
+  --red-dim:   rgba(255,94,122,0.1);
+  --green:     #34d399;
+  --green-dim: rgba(52,211,153,0.1);
+  --r:         10px;
+  --r-lg:      16px;
+  --mono:      'DM Mono', 'Fira Code', monospace;
 }
 
 body {
@@ -46,11 +42,9 @@ body {
   line-height: 1.5;
 }
 
-/* ── Layout ── */
 .page { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
 
-/* ── Header ── */
-.page-header { margin-bottom: 36px; }
+.page-header { margin-bottom: 32px; }
 .page-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--teal-dim); border: 1px solid rgba(0,196,181,0.2);
@@ -62,17 +56,40 @@ body {
 .page-title { font-size: 28px; font-weight: 900; letter-spacing: -.6px; margin-bottom: 6px; }
 .page-sub   { font-size: 13px; color: var(--text-sub); }
 
+/* ── ALERTA DE LIMPEZA ── */
+.danger-zone {
+  background: rgba(255,94,122,0.07);
+  border: 1.5px solid rgba(255,94,122,0.25);
+  border-radius: var(--r-lg); padding: 20px 24px;
+  margin-bottom: 28px;
+}
+.danger-zone-title {
+  font-size: 13px; font-weight: 800; color: var(--red);
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.danger-zone-body { font-size: 12px; color: var(--text-sub); line-height: 1.7; margin-bottom: 16px; }
+.danger-zone-body strong { color: var(--text); }
+.danger-zone-body ul { margin: 6px 0 0 16px; }
+.danger-confirm-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.danger-confirm-row input[type="text"] {
+  flex: 1; min-width: 200px; height: 40px;
+  background: var(--bg3); border: 1.5px solid rgba(255,94,122,0.3);
+  border-radius: var(--r); color: var(--text); font-size: 13px;
+  padding: 0 14px; font-family: inherit; outline: none;
+}
+.danger-confirm-row input:focus { border-color: var(--red); }
+
 /* ── Steps ── */
 .steps {
-  display: flex; gap: 0; margin-bottom: 32px;
+  display: flex; gap: 0; margin-bottom: 28px;
   border: 1px solid var(--border); border-radius: var(--r-lg);
   overflow: hidden; background: var(--bg2);
 }
 .step {
-  flex: 1; padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+  flex: 1; padding: 13px 12px; display: flex; align-items: center; gap: 8px;
   font-size: 12px; font-weight: 700; color: var(--text-dim);
-  border-right: 1px solid var(--border); cursor: default;
-  transition: all 0.2s;
+  border-right: 1px solid var(--border); cursor: default; transition: all 0.2s;
 }
 .step:last-child { border-right: none; }
 .step.active { color: var(--teal); background: var(--teal-dim); }
@@ -109,14 +126,13 @@ body {
 }
 .dropzone:hover, .dropzone.drag { border-color: var(--teal); background: var(--teal-dim); }
 .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-.dz-icon { font-size: 40px; margin-bottom: 12px; }
-.dz-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
-.dz-sub   { font-size: 12px; color: var(--text-sub); }
+.dz-icon   { font-size: 40px; margin-bottom: 12px; }
+.dz-title  { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+.dz-sub    { font-size: 12px; color: var(--text-sub); }
 .dz-accepted { font-size: 11px; color: var(--text-dim); margin-top: 8px; font-family: var(--mono); }
 .dz-loaded { border-color: var(--green); background: var(--green-dim); }
-.dz-loaded .dz-icon::after { content: ' ✓'; font-size: 24px; color: var(--green); }
 
-/* ── Stat pills ── */
+/* ── Stats ── */
 .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .stat-pill {
   display: flex; align-items: center; gap: 8px;
@@ -160,7 +176,7 @@ body {
 .tag-prof  { background: var(--gold-dim); color: var(--gold); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
 .tag-skip  { background: var(--red-dim);  color: var(--red);  padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
 
-/* ── Classes mapping ── */
+/* ── Class map ── */
 .class-map-row {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 12px; background: var(--bg3); border-radius: var(--r);
@@ -183,7 +199,7 @@ body {
 .prog-bar-wrap { height: 6px; background: var(--bg4); border-radius: 100px; margin: 12px 0; overflow: hidden; }
 .prog-bar-fill { height: 100%; background: linear-gradient(90deg, var(--teal), #00e5c8); border-radius: 100px; transition: width 0.3s; }
 .prog-log {
-  max-height: 180px; overflow-y: auto; font-family: var(--mono);
+  max-height: 200px; overflow-y: auto; font-family: var(--mono);
   font-size: 11px; color: var(--text-sub); line-height: 1.8;
 }
 .prog-log .ok   { color: var(--green); }
@@ -195,14 +211,15 @@ body {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 20px; border-radius: var(--r); border: none;
   font-size: 13px; font-weight: 700; cursor: pointer;
-  font-family: inherit; transition: all 0.18s; text-decoration: none;
+  font-family: inherit; transition: all 0.18s;
 }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-primary { background: var(--teal); color: #000; }
+.btn-primary   { background: var(--teal); color: #000; }
 .btn-primary:hover:not(:disabled) { background: #00e5c8; transform: translateY(-1px); box-shadow: 0 4px 20px var(--teal-glow); }
 .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
 .btn-secondary:hover:not(:disabled) { background: var(--bg4); border-color: var(--teal); }
-.btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,94,122,0.2); }
+.btn-danger    { background: var(--red-dim); color: var(--red); border: 1.5px solid rgba(255,94,122,0.3); }
+.btn-danger:hover:not(:disabled) { background: rgba(255,94,122,0.18); }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 
 /* ── Info box ── */
@@ -210,15 +227,28 @@ body {
   display: flex; gap: 12px; align-items: flex-start;
   background: var(--gold-dim); border: 1px solid rgba(240,180,41,0.2);
   border-radius: var(--r); padding: 12px 16px;
-  font-size: 12px; color: var(--text-sub); line-height: 1.6;
-  margin-bottom: 16px;
+  font-size: 12px; color: var(--text-sub); line-height: 1.6; margin-bottom: 16px;
 }
 .info-box .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 .info-box.success { background: var(--green-dim); border-color: rgba(52,211,153,0.2); }
+.info-box.danger  { background: var(--red-dim); border-color: rgba(255,94,122,0.2); }
 
-/* ── Section hidden ── */
-.section { display: none; }
-.section.active { display: block; }
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 12px 20px;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 9999; white-space: nowrap;
+  animation: toastIn .25s ease;
+}
+.toast.ok  { border-color: rgba(52,211,153,0.4); color: var(--green); }
+.toast.err { border-color: rgba(255,94,122,0.4); color: var(--red); }
+@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+.section       { display: none; }
+.section.active{ display: block; }
 </style>
 </head>
 <body>
@@ -228,7 +258,25 @@ body {
   <div class="page-header">
     <div class="page-badge">📋 AD Fonte da Salvação</div>
     <div class="page-title">Importador EBD</div>
-    <div class="page-sub">Migração da base de dados do sistema antigo para a plataforma de gestão</div>
+    <div class="page-sub">Migração da base de dados do sistema antigo · Escola Dominical</div>
+  </div>
+
+  <!-- ══ ZONA DE PERIGO — LIMPAR DADOS ══ -->
+  <div class="danger-zone" id="danger-zone">
+    <div class="danger-zone-title">⚠️ Limpar dados existentes</div>
+    <div class="danger-zone-body">
+      Esta ação apaga <strong>todos os registros</strong> das abas operacionais, preservando apenas os cabeçalhos e configurações:
+      <ul>
+        <li>Classes, Alunos, Professores</li>
+        <li>Aulas, Chamadas, ChamadasInfo</li>
+      </ul>
+      <strong>Use antes de importar a base oficial.</strong> Ação irreversível.
+    </div>
+    <div class="danger-confirm-row">
+      <input type="text" id="confirmar-texto" placeholder='Digite "LIMPAR" para confirmar' autocomplete="off">
+      <button class="btn btn-danger" id="btn-limpar" onclick="limparDados()" disabled>🗑 Apagar tudo</button>
+    </div>
+    <div id="limpar-resultado" style="margin-top:10px;font-size:12px;color:var(--text-sub)"></div>
   </div>
 
   <!-- Steps -->
@@ -258,7 +306,7 @@ body {
       <div class="card-title">Mapeamento de campos</div>
       <div class="info-box">
         <span class="icon">ℹ️</span>
-        <div>O importador mapeia automaticamente os campos do sistema antigo para o modelo atual. Revise abaixo antes de prosseguir.</div>
+        <div>Campos mapeados automaticamente do sistema antigo para o modelo atual. A coluna <strong>position</strong> define o destino: <code>student</code> → Alunos / <code>teacher</code> → Professores.</div>
       </div>
       <table class="map-table">
         <thead><tr><th>Campo antigo</th><th></th><th>Campo novo</th><th>Observação</th></tr></thead>
@@ -270,18 +318,16 @@ body {
           <tr><td class="field-old">email</td><td class="field-arrow">→</td><td class="field-new">Email</td><td class="field-note">Ambas as abas</td></tr>
           <tr><td class="field-old">birthday</td><td class="field-arrow">→</td><td class="field-new">DataNasc</td><td class="field-note">Convertido para dd/mm/aaaa</td></tr>
           <tr><td class="field-old">streetName + streetNumber + neighborhoodName + city + state</td><td class="field-arrow">→</td><td class="field-new">Endereco</td><td class="field-note"><span class="badge-join">concatenado</span></td></tr>
-          <tr><td class="field-old">parentOne + phoneOne + parentTwo + phoneTwo</td><td class="field-arrow">→</td><td class="field-new">Endereco</td><td class="field-note"><span class="badge-join">concatenado</span> appended</td></tr>
+          <tr><td class="field-old">parentOne + phoneOne + parentTwo + phoneTwo</td><td class="field-arrow">→</td><td class="field-new">Endereco</td><td class="field-note"><span class="badge-join">appended</span></td></tr>
           <tr><td class="field-old">status</td><td class="field-arrow">→</td><td class="field-new">Ativo</td><td class="field-note">"active"→true / demais→false</td></tr>
           <tr><td class="field-old">date</td><td class="field-arrow">→</td><td class="field-new">CriadoEm</td><td class="field-note">Data de cadastro</td></tr>
-          <tr><td class="field-old">personGender / schoolStatus / maritalStatus</td><td class="field-arrow">→</td><td class="field-new"><span class="badge-skip">ignorado</span></td><td class="field-note">Sem campo equivalente no modelo atual</td></tr>
+          <tr><td class="field-old">personGender / schoolStatus / maritalStatus</td><td class="field-arrow">→</td><td class="field-new"><span class="badge-skip">ignorado</span></td><td class="field-note">Sem campo equivalente</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-primary" id="btn-analisar" disabled onclick="analisar()">
-        Analisar planilha →
-      </button>
+      <button class="btn btn-primary" id="btn-analisar" disabled onclick="analisar()">Analisar planilha →</button>
     </div>
   </div>
 
@@ -296,7 +342,6 @@ body {
       <span class="icon">⚠️</span>
       <div id="duplicatas-msg"></div>
     </div>
-
     <div id="inativos-box" class="info-box" style="display:none">
       <span class="icon">🔴</span>
       <div id="inativos-msg"></div>
@@ -317,7 +362,7 @@ body {
 
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="goStep(1)">← Voltar</button>
-      <button class="btn btn-primary" onclick="goStep(3)">Mapear turmas →</button>
+      <button class="btn btn-primary" onclick="goStep3()">Mapear turmas →</button>
     </div>
   </div>
 
@@ -328,18 +373,18 @@ body {
       <div class="info-box">
         <span class="icon">🏫</span>
         <div>
-          Para cada turma encontrada na planilha antiga, selecione a turma correspondente no sistema novo.
-          Se não existir, selecione "— Criar nova turma —" e o importador a criará automaticamente.
+          Para cada turma da planilha antiga, selecione a correspondente no sistema novo.
+          Se não existir, selecione <strong>"— Criar nova turma —"</strong> e o importador a cria automaticamente.
         </div>
       </div>
-      <div id="class-map-list"></div>
+      <div id="class-map-list">
+        <div style="padding:24px;text-align:center;color:var(--text-sub)">Carregando turmas do sistema...</div>
+      </div>
     </div>
 
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="goStep(2)">← Voltar</button>
-      <button class="btn btn-primary" id="btn-importar" onclick="iniciarImportacao()">
-        🚀 Iniciar importação
-      </button>
+      <button class="btn btn-primary" id="btn-importar" onclick="iniciarImportacao()">🚀 Iniciar importação</button>
     </div>
   </div>
 
@@ -379,26 +424,49 @@ body {
 <script>
 // ══════════════════════════════════════════════════
 //  IMPORTADOR EBD — Lógica principal
+//  Usa: imp_listarClasses, imp_importarAluno,
+//       imp_importarProfessor, imp_limparDados
 // ══════════════════════════════════════════════════
 
-var _rawData      = [];   // linhas brutas do Excel
-var _mappedData   = [];   // linhas mapeadas {tipo, dados}
-var _classesNew   = [];   // turmas existentes no sistema
-var _classMapping = {};   // classAntigaName -> classeID (ou '__new__:NomeTurma')
-var _uniqueClasses= [];   // turmas únicas encontradas na planilha antiga
+var _rawData      = [];
+var _mappedData   = [];
+var _classesNew   = [];
+var _classMapping = {};
+var _uniqueClasses= [];
 
-// ── Utilitários ──────────────────────────────────────
+// Token recuperado da URL (injetado pelo GAS no doGet)
+var _token = (function() {
+  try {
+    var params = {};
+    window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m, k, v) {
+      params[k] = decodeURIComponent(v);
+    });
+    return params['token'] || '';
+  } catch(e) { return ''; }
+})();
+
+// ── Toast ──────────────────────────────────────────────
+function _toast(msg, type) {
+  var t = document.createElement('div');
+  t.className = 'toast ' + (type||'');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
+}
+
+// ── Utilitários ────────────────────────────────────────
+function _esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function _fmtDate(val) {
   if (!val) return '';
   var s = String(val).trim();
-  // ISO yyyy-mm-dd
   var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return m[3]+'/'+m[2]+'/'+m[1];
-  // dd/mm/yyyy já OK
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-  // Número serial Excel (dias desde 1899-12-30)
   var n = parseFloat(s);
-  if (!isNaN(n)) {
+  if (!isNaN(n) && n > 1000) {
     var d = new Date(Math.round((n - 25569) * 86400 * 1000));
     return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
   }
@@ -413,44 +481,86 @@ function _isAtivo(val) {
 
 function _buildEndereco(row) {
   var parts = [];
-  if (row.streetName)        parts.push(row.streetName);
-  if (row.streetNumber)      parts.push(row.streetNumber);
-  if (row.neighborhoodName)  parts.push(row.neighborhoodName);
-  if (row.city)              parts.push(row.city);
-  if (row.state)             parts.push(row.state);
+  if (row.streetName)       parts.push(row.streetName);
+  if (row.streetNumber)     parts.push(row.streetNumber);
+  if (row.neighborhoodName) parts.push(row.neighborhoodName);
+  if (row.city)             parts.push(row.city);
+  if (row.state)            parts.push(row.state);
   var addr = parts.filter(Boolean).join(', ');
   var pais = [];
-  if (row.parentOne)  pais.push('Resp1: '+row.parentOne+(row.phoneOne?' ('+row.phoneOne+')':''));
-  if (row.parentTwo)  pais.push('Resp2: '+row.parentTwo+(row.phoneTwo?' ('+row.phoneTwo+')':''));
+  if (row.parentOne) pais.push('Resp1: '+row.parentOne+(row.phoneOne?' ('+row.phoneOne+')':''));
+  if (row.parentTwo) pais.push('Resp2: '+row.parentTwo+(row.phoneTwo?' ('+row.phoneTwo+')':''));
   if (pais.length) addr += (addr ? ' | ' : '') + pais.join(' | ');
   return addr;
 }
 
-// ── Step navigation ──────────────────────────────────
+// ── Limpar dados ───────────────────────────────────────
+document.getElementById('confirmar-texto').addEventListener('input', function() {
+  document.getElementById('btn-limpar').disabled = this.value.trim().toUpperCase() !== 'LIMPAR';
+});
+
+function limparDados() {
+  var btn = document.getElementById('btn-limpar');
+  var res = document.getElementById('limpar-resultado');
+  btn.disabled = true;
+  btn.textContent = '⏳ Limpando...';
+  res.textContent = '';
+
+  if (typeof google === 'undefined' || !google.script) {
+    setTimeout(function() {
+      res.innerHTML = '<span style="color:var(--green)">✓ Simulado (sem GAS). Prossiga com o upload.</span>';
+      btn.textContent = '🗑 Apagar tudo';
+      document.getElementById('confirmar-texto').value = '';
+      btn.disabled = true;
+    }, 800);
+    return;
+  }
+
+  google.script.run
+    .withFailureHandler(function(e) {
+      res.innerHTML = '<span style="color:var(--red)">✗ Erro: ' + _esc(e.message) + '</span>';
+      btn.textContent = '🗑 Apagar tudo';
+    })
+    .withSuccessHandler(function(r) {
+      btn.textContent = '🗑 Apagar tudo';
+      document.getElementById('confirmar-texto').value = '';
+      btn.disabled = true;
+      if (!r || !r.success) {
+        res.innerHTML = '<span style="color:var(--red)">✗ ' + _esc(r && r.error ? r.error : 'Erro desconhecido') + '</span>';
+        return;
+      }
+      var detalhes = (r.data && r.data.detalhes) ? r.data.detalhes : [];
+      res.innerHTML = '<span style="color:var(--green)">✓ Limpeza concluída!</span> ' +
+        detalhes.map(function(d){ return _esc(d); }).join(' · ');
+      _toast('Dados apagados com sucesso! Agora faça o upload da base oficial.', 'ok');
+    })
+    .imp_limparDados(_token);
+}
+
+// ── Step navigation ────────────────────────────────────
 function goStep(n) {
-  [1,2,3,4,5].forEach(function(i) {
-    document.getElementById('sec-'+['upload','analise','turmas','importando','resultado'][i-1]).classList.toggle('active', i===n);
-    var s = document.getElementById('step-'+i);
+  var secIds = ['upload','analise','turmas','importando','resultado'];
+  secIds.forEach(function(id, i) {
+    document.getElementById('sec-'+id).classList.toggle('active', i+1 === n);
+    var s = document.getElementById('step-'+(i+1));
     s.classList.remove('active','done');
-    if (i < n) s.classList.add('done');
-    if (i === n) s.classList.add('active');
+    if (i+1 < n) s.classList.add('done');
+    if (i+1 === n) s.classList.add('active');
   });
 }
 
-// ── Upload & parse ───────────────────────────────────
+// ── Upload & parse ─────────────────────────────────────
 var _dz = document.getElementById('dropzone');
 var _fi = document.getElementById('file-input');
 
-_dz.addEventListener('dragover', function(e){ e.preventDefault(); _dz.classList.add('drag'); });
+_dz.addEventListener('dragover',  function(e){ e.preventDefault(); _dz.classList.add('drag'); });
 _dz.addEventListener('dragleave', function()  { _dz.classList.remove('drag'); });
 _dz.addEventListener('drop', function(e) {
   e.preventDefault(); _dz.classList.remove('drag');
   var f = e.dataTransfer.files[0];
   if (f) handleFile(f);
 });
-_fi.addEventListener('change', function() {
-  if (_fi.files[0]) handleFile(_fi.files[0]);
-});
+_fi.addEventListener('change', function() { if (_fi.files[0]) handleFile(_fi.files[0]); });
 
 function handleFile(file) {
   var reader = new FileReader();
@@ -459,62 +569,80 @@ function handleFile(file) {
       var wb = XLSX.read(e.target.result, { type: 'binary', cellDates: false });
       var ws = wb.Sheets[wb.SheetNames[0]];
       _rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      if (!_rawData.length) { alert('Planilha vazia ou formato inválido.'); return; }
+      if (!_rawData.length) { _toast('Planilha vazia ou formato inválido.', 'err'); return; }
 
       _dz.classList.add('dz-loaded');
+      _dz.querySelector('.dz-icon').textContent  = '✅';
+      _dz.querySelector('.dz-title').textContent = file.name;
+      _dz.querySelector('.dz-sub').textContent   = _rawData.length + ' registros encontrados';
+
       document.getElementById('file-info').style.display = 'flex';
       document.getElementById('file-info').innerHTML =
-        '<div class="stat-pill"><div class="dot" style="background:var(--teal)"></div>'+_rawData.length+' registros</div>'+
+        '<div class="stat-pill"><div class="dot" style="background:var(--teal)"></div>'+_rawData.length+' linhas</div>'+
         '<div class="stat-pill"><div class="dot" style="background:var(--gold)"></div>'+file.name+'</div>'+
         '<div class="stat-pill"><div class="dot" style="background:var(--text-sub)"></div>'+(file.size/1024).toFixed(1)+' KB</div>';
+
       document.getElementById('btn-analisar').disabled = false;
-    } catch(err) { alert('Erro ao ler arquivo: '+err.message); }
+
+      // Mostrar colunas detectadas
+      if (_rawData.length) {
+        var cols = Object.keys(_rawData[0]);
+        _toast('Colunas detectadas: ' + cols.slice(0,6).join(', ') + (cols.length>6?'...':''), 'ok');
+      }
+    } catch(err) { _toast('Erro ao ler arquivo: ' + err.message, 'err'); }
   };
   reader.readAsBinaryString(file);
 }
 
-// ── Análise ──────────────────────────────────────────
+// ── Análise ────────────────────────────────────────────
 function analisar() {
-  _mappedData = _rawData.map(function(row) {
-    var pos = String(row.position||'').toLowerCase().trim();
+  _mappedData = [];
+  var seenNames = {};
+
+  _rawData.forEach(function(row) {
+    var pos  = String(row.position||'').toLowerCase().trim();
     var tipo = (pos === 'teacher' || pos === 'professor') ? 'prof' : 'aluno';
     var ativo = _isAtivo(row.status);
     var dados = {
-      Nome:      (row.name||'').trim(),
-      DataNasc:  _fmtDate(row.birthday),
-      Classe:    (row.classroom||'').trim(),
-      Telefone:  (row.phone||'').trim(),
-      Email:     (row.email||'').trim(),
-      Endereco:  _buildEndereco(row),
-      Ativo:     ativo,
-      CriadoEm: _fmtDate(row.date)
+      Nome:     (String(row.name||'')).trim(),
+      DataNasc: _fmtDate(row.birthday),
+      Classe:   String(row.classroom||'').trim(),
+      Telefone: String(row.phone||'').trim(),
+      Email:    String(row.email||'').trim(),
+      Endereco: _buildEndereco(row),
+      Ativo:    ativo,
+      CriadoEm:_fmtDate(row.date)
     };
-    return { tipo: tipo, dados: dados, ativo: ativo };
-  }).filter(function(r){ return r.dados.Nome; }); // remove linhas sem nome
+    if (!dados.Nome) return; // ignora linha sem nome
 
-  var alunos = _mappedData.filter(function(r){ return r.tipo==='aluno'; });
-  var profs  = _mappedData.filter(function(r){ return r.tipo==='prof'; });
-  var ativos = _mappedData.filter(function(r){ return r.ativo; });
-  var inativos = _mappedData.filter(function(r){ return !r.ativo; });
+    var nLow = dados.Nome.toLowerCase();
+    var dup  = !!seenNames[nLow];
+    seenNames[nLow] = true;
 
-  // Stats
+    _mappedData.push({ tipo: tipo, dados: dados, ativo: ativo, dup: dup });
+  });
+
+  var alunos   = _mappedData.filter(function(r){ return r.tipo==='aluno' && !r.dup; });
+  var profs    = _mappedData.filter(function(r){ return r.tipo==='prof'  && !r.dup; });
+  var ativos   = _mappedData.filter(function(r){ return r.ativo && !r.dup; });
+  var inativos = _mappedData.filter(function(r){ return !r.ativo && !r.dup; });
+  var dups     = _mappedData.filter(function(r){ return r.dup; });
+
   document.getElementById('resumo-stats').innerHTML =
     '<div class="stat-pill"><div class="dot" style="background:var(--teal)"></div>'+alunos.length+' alunos</div>'+
     '<div class="stat-pill"><div class="dot" style="background:var(--gold)"></div>'+profs.length+' professores</div>'+
     '<div class="stat-pill"><div class="dot" style="background:var(--green)"></div>'+ativos.length+' ativos</div>'+
-    '<div class="stat-pill"><div class="dot" style="background:var(--red)"></div>'+inativos.length+' inativos</div>';
+    '<div class="stat-pill"><div class="dot" style="background:var(--red)"></div>'+inativos.length+' inativos</div>'+
+    (dups.length ? '<div class="stat-pill"><div class="dot" style="background:var(--text-dim)"></div>'+dups.length+' duplicados ignorados</div>' : '');
 
-  // Detectar duplicatas pelo nome
-  var nomes = _mappedData.map(function(r){ return r.dados.Nome.toLowerCase(); });
-  var dups = nomes.filter(function(n,i){ return nomes.indexOf(n) !== i; });
   var dupBox = document.getElementById('duplicatas-box');
   if (dups.length) {
     dupBox.style.display = 'flex';
+    var nomes = dups.map(function(d){ return d.dados.Nome; }).slice(0,5).join(', ');
     document.getElementById('duplicatas-msg').textContent =
-      '⚠️ '+dups.length+' nome(s) duplicado(s) encontrado(s): '+[...new Set(dups)].slice(0,5).join(', ')+'... O importador vai ignorar os duplicados mantendo o primeiro registro.';
+      dups.length + ' nome(s) duplicado(s): ' + nomes + (dups.length>5?'...':'') + '. Serão ignorados na importação.';
   } else { dupBox.style.display = 'none'; }
 
-  // Inativos aviso
   var inativBox = document.getElementById('inativos-box');
   if (inativos.length) {
     inativBox.style.display = 'flex';
@@ -522,16 +650,14 @@ function analisar() {
       '<strong>'+inativos.length+' registros inativos</strong> serão importados com <code>Ativo=false</code> e não aparecerão nas listas do sistema.';
   } else { inativBox.style.display = 'none'; }
 
-  // Preview
+  // Preview (máximo 200 linhas para não travar o browser)
   var tbody = document.getElementById('preview-body');
   var html = '';
-  var seenNames = {};
+  var count = 0;
   _mappedData.forEach(function(r) {
-    var nLow = r.dados.Nome.toLowerCase();
-    var dup = seenNames[nLow];
-    seenNames[nLow] = true;
-    var cls = dup ? 'row-skip' : (r.tipo==='prof' ? 'row-prof' : 'row-aluno');
-    var tag = dup ? '<span class="tag-skip">DUP</span>' :
+    if (count >= 200) return;
+    var cls = r.dup ? 'row-skip' : (r.tipo==='prof' ? 'row-prof' : 'row-aluno');
+    var tag = r.dup ? '<span class="tag-skip">DUP</span>' :
               (r.tipo==='prof' ? '<span class="tag-prof">Professor</span>' : '<span class="tag-aluno">Aluno</span>');
     html += '<tr class="'+cls+'">'+
       '<td>'+tag+'</td>'+
@@ -542,116 +668,129 @@ function analisar() {
       '<td>'+_esc(r.dados.DataNasc)+'</td>'+
       '<td>'+(r.ativo?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--red)">✗</span>')+'</td>'+
     '</tr>';
+    count++;
   });
+  if (_mappedData.length > 200) {
+    html += '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:12px">... e mais '+(_mappedData.length-200)+' registros</td></tr>';
+  }
   tbody.innerHTML = html;
 
-  // Turmas únicas
-  _uniqueClasses = [...new Set(_mappedData.map(function(r){ return r.dados.Classe; }).filter(Boolean))];
+  _uniqueClasses = [];
+  var seenCls = {};
+  _mappedData.forEach(function(r) {
+    if (r.dados.Classe && !seenCls[r.dados.Classe]) {
+      seenCls[r.dados.Classe] = true;
+      _uniqueClasses.push(r.dados.Classe);
+    }
+  });
 
   goStep(2);
 }
 
-// ── Mapeamento de turmas ──────────────────────────────
+// ── Step 3: Mapeamento de turmas ────────────────────────
+function goStep3() {
+  goStep(3);
+
+  if (typeof google === 'undefined' || !google.script) {
+    _classesNew = [];
+    buildClassMap();
+    return;
+  }
+
+  google.script.run
+    .withFailureHandler(function(e) {
+      _classesNew = [];
+      buildClassMap();
+      _toast('Aviso: não foi possível carregar turmas existentes. Todas serão criadas.', 'warn');
+    })
+    .withSuccessHandler(function(r) {
+      _classesNew = (r && r.success && r.data) ? r.data : [];
+      buildClassMap();
+    })
+    .imp_listarClasses();
+}
+
 function buildClassMap() {
   var list = document.getElementById('class-map-list');
-  var html = '';
+  if (!_uniqueClasses.length) {
+    list.innerHTML = '<div style="color:var(--text-sub);font-size:12px;padding:8px">Nenhuma turma encontrada na planilha.</div>';
+    return;
+  }
+
   var optionsHtml = '<option value="__new__">— Criar nova turma —</option>';
   _classesNew.forEach(function(c) {
     optionsHtml += '<option value="'+_esc(c.ID)+'">'+_esc(c.Nome)+'</option>';
   });
 
+  var html = '';
   _uniqueClasses.forEach(function(cls) {
-    // Tentar match automático por nome similar
-    var auto = _classesNew.find(function(c){
-      return c.Nome.toLowerCase().trim() === cls.toLowerCase().trim();
-    });
     html += '<div class="class-map-row">'+
       '<div class="class-map-old">'+_esc(cls)+'</div>'+
       '<div class="class-map-arrow">→</div>'+
-      '<select class="class-map-select" data-old="'+_esc(cls)+'">'+
-        optionsHtml+
-      '</select>'+
+      '<select class="class-map-select" data-old="'+_esc(cls)+'">'+optionsHtml+'</select>'+
     '</div>';
-    // Set default after injection
   });
   list.innerHTML = html;
 
-  // Set auto-match
-  setTimeout(function() {
-    list.querySelectorAll('select').forEach(function(sel) {
-      var oldName = sel.getAttribute('data-old');
-      var match = _classesNew.find(function(c){
-        return c.Nome.toLowerCase().trim() === (oldName||'').toLowerCase().trim();
-      });
-      if (match) sel.value = match.ID;
-    });
-  }, 50);
+  // Auto-match por nome igual
+  list.querySelectorAll('select').forEach(function(sel) {
+    var oldName = sel.getAttribute('data-old');
+    for (var i = 0; i < _classesNew.length; i++) {
+      if (_classesNew[i].Nome.toLowerCase().trim() === (oldName||'').toLowerCase().trim()) {
+        sel.value = _classesNew[i].ID;
+        break;
+      }
+    }
+  });
 }
 
-function goStep3() {
-  // Carregar turmas do sistema
-  if (typeof google !== 'undefined' && google.script) {
-    google.script.run
-      .withFailureHandler(function(e){ _classesNew = []; buildClassMap(); })
-      .withSuccessHandler(function(r){ _classesNew = (r&&r.success&&r.data)||[]; buildClassMap(); })
-      .ed_listarClasses(null); // token null — só leitura
-  } else {
-    // Modo demo sem GAS
-    _classesNew = [];
-    buildClassMap();
-  }
-  goStep(3);
-}
-
-// Override do botão Mapear turmas →
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelector('#sec-analise .btn-primary').onclick = goStep3;
-});
-
-// ── Importação ────────────────────────────────────────
+// ── Importação ──────────────────────────────────────────
 function iniciarImportacao() {
-  // Montar mapeamento de classes
+  // Ler mapeamento de turmas
   document.querySelectorAll('.class-map-select').forEach(function(sel) {
     _classMapping[sel.getAttribute('data-old')] = sel.value;
   });
   goStep(4);
-  setTimeout(executarImportacao, 200);
+  setTimeout(executarImportacao, 300);
 }
 
 function executarImportacao() {
-  // Remover duplicatas (manter 1o encontrado)
-  var seenNames = {};
-  var registros = _mappedData.filter(function(r) {
-    var k = r.dados.Nome.toLowerCase();
-    if (seenNames[k]) return false;
-    seenNames[k] = true;
-    return true;
-  });
-
+  // Filtrar somente registros válidos (sem duplicados)
+  var registros = _mappedData.filter(function(r) { return !r.dup; });
   var total = registros.length;
-  var ok = 0, erros = 0, idx = 0;
+  var ok = 0, erros = 0, dup = 0, idx = 0;
   var log = document.getElementById('prog-log');
 
   function _log(msg, cls) {
-    log.innerHTML += '<div class="'+(cls||'')+'">'+msg+'</div>';
+    var line = document.createElement('div');
+    line.className = cls || '';
+    line.textContent = msg;
+    log.appendChild(line);
     log.scrollTop = log.scrollHeight;
   }
 
   function _setProgress(done) {
     var pct = Math.round(done/total*100);
-    document.getElementById('prog-bar').style.width = pct+'%';
-    document.getElementById('prog-pct').textContent = pct+'%';
-    document.getElementById('prog-label').textContent = 'Importando '+done+' / '+total+'...';
+    document.getElementById('prog-bar').style.width = pct + '%';
+    document.getElementById('prog-pct').textContent = pct + '%';
+    document.getElementById('prog-label').textContent = 'Importando '+done+'/'+total+'...';
   }
 
   function _finalize() {
+    document.getElementById('prog-label').textContent = 'Concluído!';
+    document.getElementById('prog-pct').textContent = '100%';
+    document.getElementById('prog-bar').style.width = '100%';
+
     document.getElementById('resultado-msg').innerHTML =
-      '<strong>'+ok+' registros importados</strong> com sucesso.'+(erros?' <span style="color:var(--red)">'+erros+' erros.</span>':'');
-    var alunos = registros.filter(function(r){ return r.tipo==='aluno'; }).length;
-    var profs  = registros.filter(function(r){ return r.tipo==='prof'; }).length;
+      '<strong>'+ok+' registros importados</strong> com sucesso.'+
+      (dup  ? ' <span style="color:var(--gold)">'+dup+' duplicados ignorados pelo servidor.</span>' : '')+
+      (erros? ' <span style="color:var(--red)">'+erros+' erros.</span>' : '');
+
+    var alunosImp = registros.filter(function(r){ return r.tipo==='aluno'; }).length;
+    var profsImp  = registros.filter(function(r){ return r.tipo==='prof'; }).length;
     document.getElementById('resultado-stats').innerHTML =
-      '<div class="stat-pill"><div class="dot" style="background:var(--teal)"></div>'+alunos+' alunos</div>'+
-      '<div class="stat-pill"><div class="dot" style="background:var(--gold)"></div>'+profs+' professores</div>'+
+      '<div class="stat-pill"><div class="dot" style="background:var(--teal)"></div>'+alunosImp+' alunos</div>'+
+      '<div class="stat-pill"><div class="dot" style="background:var(--gold)"></div>'+profsImp+' professores</div>'+
       '<div class="stat-pill"><div class="dot" style="background:var(--green)"></div>'+ok+' importados</div>'+
       (erros?'<div class="stat-pill"><div class="dot" style="background:var(--red)"></div>'+erros+' falhas</div>':'');
     goStep(5);
@@ -659,64 +798,67 @@ function executarImportacao() {
 
   function processNext() {
     if (idx >= total) { _finalize(); return; }
-    var r   = registros[idx++];
-    var old = r.dados.Classe;
-    var classeID = _classMapping[old] || '';
-    var isNew = classeID === '__new__';
+    var r = registros[idx++];
+    var oldClasse  = r.dados.Classe;
+    var classeVal  = _classMapping[oldClasse] || '__new__';
+    var isNew      = classeVal === '__new__';
+    var classeID   = isNew ? '' : classeVal;
+    var nomeTurma  = isNew ? oldClasse : null;
 
-    // Preparar dados no formato do sistema
     var dados = {
       Nome:     r.dados.Nome,
       DataNasc: r.dados.DataNasc,
-      ClasseID: isNew ? '' : classeID,
+      ClasseID: classeID,
       Telefone: r.dados.Telefone,
       Email:    r.dados.Email,
       Endereco: r.dados.Endereco,
-      Ativo:    r.dados.Ativo,
+      Ativo:    r.dados.ativo !== undefined ? r.dados.ativo : r.ativo,
       CriadoEm: r.dados.CriadoEm
     };
 
     _setProgress(idx);
 
     if (typeof google === 'undefined' || !google.script) {
-      // Simulação sem GAS
       setTimeout(function() {
         ok++;
-        _log('✓ '+r.dados.Nome+' ('+r.tipo+')', 'ok');
+        _log('✓ ' + r.dados.Nome + ' (' + r.tipo + ')', 'ok');
         processNext();
-      }, 30);
+      }, 20);
       return;
     }
 
-    var fn = r.tipo === 'prof' ? 'ed_importarProfessor' : 'ed_importarAluno';
+    var fn = r.tipo === 'prof' ? 'imp_importarProfessor' : 'imp_importarAluno';
+
     google.script.run
       .withFailureHandler(function(e) {
         erros++;
-        _log('✗ '+r.dados.Nome+': '+e.message, 'err');
+        _log('✗ ' + r.dados.Nome + ': ' + e.message, 'err');
         processNext();
       })
       .withSuccessHandler(function(res) {
         if (res && res.success) {
           ok++;
-          _log('✓ '+r.dados.Nome+' ('+r.tipo+')', 'ok');
+          _log('✓ ' + r.dados.Nome + ' (' + r.tipo + ')', 'ok');
         } else {
-          erros++;
-          _log('⚠ '+r.dados.Nome+': '+(res&&res.error||'erro'), 'warn');
+          var msg = res && res.error ? res.error : 'erro';
+          if (msg.indexOf('Duplicado') !== -1 || msg.indexOf('já existe') !== -1) {
+            dup++;
+            _log('⚠ ' + r.dados.Nome + ' — ' + msg, 'warn');
+          } else {
+            erros++;
+            _log('✗ ' + r.dados.Nome + ': ' + msg, 'err');
+          }
         }
         processNext();
       })
-      [fn](dados, isNew ? old : null); // passa o nome da turma se for criar nova
+      [fn](dados, nomeTurma);
   }
 
-  _log('🚀 Iniciando importação de '+total+' registros...');
+  _log('🚀 Iniciando importação de ' + total + ' registros...');
   processNext();
 }
 
-// ── Helpers ──────────────────────────────────────────
-function _esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
+// ── Fechar ─────────────────────────────────────────────
 function fechar() {
   if (typeof google !== 'undefined' && google.script) {
     google.script.host.close();

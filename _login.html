@@ -61,13 +61,14 @@
 }
 .login-logo-bg {
   position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, rgba(0,196,181,.22), var(--teal-dim));
-  border: 1.5px solid rgba(0,196,181,.28);
+  background: radial-gradient(circle at 40% 35%, #00b8ad, #007d78);
+  border: 2px solid rgba(0,196,181,.55);
+  box-shadow: 0 4px 24px rgba(0,196,181,.30), inset 0 1px 0 rgba(255,255,255,.12);
   animation: ringPulse 3s ease-in-out infinite;
 }
 @keyframes ringPulse {
-  0%,100% { box-shadow: 0 0 0 0 var(--teal-glow), 0 0 24px var(--teal-glow2); }
-  50%      { box-shadow: 0 0 0 18px transparent,  0 0 50px rgba(0,196,181,.20); }
+  0%,100% { box-shadow: 0 4px 24px rgba(0,196,181,.30), inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 0 rgba(0,196,181,.35); }
+  50%      { box-shadow: 0 4px 32px rgba(0,196,181,.45), inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 14px transparent; }
 }
 .login-logo-ring::before, .login-logo-ring::after {
   content: ''; position: absolute; border-radius: 50%;
@@ -219,21 +220,6 @@
   .login-card, .pa-card { padding: 26px 18px; border-radius: var(--r-lg); }
 }
 
-
-/* Contraste forte do logo no login */
-.login-logo-bg {
-  background: radial-gradient(circle at 38% 30%, #147D73 0%, #063A36 74%) !important;
-  border-color: rgba(6, 58, 54, 0.52) !important;
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.20), 0 0 0 6px rgba(0, 217, 198, 0.08), inset 0 1px 0 rgba(255,255,255,0.18) !important;
-}
-.login-logo-ring .app-logo-img {
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.45)) contrast(1.16) saturate(1.08) !important;
-}
-[data-theme="light"] .login-logo-ring::before,
-[data-theme="light"] .login-logo-ring::after {
-  border-color: rgba(6, 58, 54, 0.22) !important;
-}
-
 /* ── Ícones de input — visíveis em dark e light ── */
 .login-card .input-icon,
 .pa-card    .input-icon {
@@ -270,7 +256,7 @@ function renderLogin() {
           '<div class="login-logo-ring">' +
             '<div class="login-logo-bg"></div>' +
             '<div class="login-logo-icon">' +
-              '<img src="" alt="Logo AD" class="app-logo-img" style="width:56px;height:56px;object-fit:contain">' +
+              '<img src="" alt="Logo AD" class="app-logo-img" style="width:56px;height:56px;object-fit:contain;filter:brightness(0) invert(1);opacity:.95">' +
             '</div>' +
           '</div>' +
           '<h1 class="login-church-name">AD Fonte da Salvação</h1>' +

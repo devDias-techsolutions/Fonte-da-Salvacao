@@ -332,31 +332,39 @@ function mbEsc(s) {
 /* ── PERSISTÊNCIA GAS ── */
 function mbLoadFromSheet(cb) {
   if (typeof google==='undefined'||!google.script) { cb([]); return; }
+  var token = App.session && App.session.token;
   google.script.run
-    .withSuccessHandler(function(rows){
-      MB.membros = rows||[];
+    .withSuccessHandler(function(r){
+      /* getMembros retorna {success, data:[]} via Util.ok */
+      MB.membros = (r && r.success && Array.isArray(r.data)) ? r.data : [];
       if (cb) cb(MB.membros);
     })
     .withFailureHandler(function(e){
       console.error('[Membros] getMembros:', e);
       showToast('Erro ao carregar membros','error');
+      MB.membros = [];
       if (cb) cb([]);
     })
-    .getMembros();
+    .getMembros(token);
 }
 function mbSaveToSheet(membro, cb) {
   if (typeof google==='undefined'||!google.script) { if(cb)cb({success:true}); return; }
+  var token = App.session && App.session.token;
   google.script.run
     .withSuccessHandler(function(r){ if(cb)cb(r); })
-    .withFailureHandler(function(e){ console.error('[Membros] salvarMembro:',e); showToast('Erro ao salvar membro','error'); })
-    .salvarMembro(membro);
+    .withFailureHandler(function(e){
+      console.error('[Membros] salvarMembro:',e);
+      if(cb)cb({success:false, error: e.message||String(e)});
+    })
+    .salvarMembro(token, membro);
 }
 function mbDeleteFromSheet(id, cb) {
   if (typeof google==='undefined'||!google.script) { if(cb)cb({success:true}); return; }
+  var token = App.session && App.session.token;
   google.script.run
     .withSuccessHandler(function(r){ if(cb)cb(r); })
     .withFailureHandler(function(e){ console.error('[Membros] deletarMembro:',e); showToast('Erro ao deletar membro','error'); })
-    .deletarMembro(id);
+    .deletarMembro(token, id);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1499,39 +1507,142 @@ function mbExportarJSON() {
   showToast('Backup gerado com sucesso','success');
 }
 
+/* ── Normaliza registro do backup (camelCase / campos antigos) → PascalCase da sheet ── */
+function _mbNormalizarRegistro(m) {
+  var id = m.ID || m.id || (Date.now() + Math.random());
+  return {
+    ID:           id,
+    Rol:          (m.Rol          || m.rol          || '').toString().trim(),
+    Nome:         (m.Nome         || m.nome         || '').toString().trim(),
+    Sexo:         (m.Sexo         || m.sexo         || '').toString().trim(),
+    Nascimento:   (m.Nascimento   || m.nascimento   || '').toString().trim(),
+    NomeMae:      (m.NomeMae      || m.nomeMae      || '').toString().trim(),
+    NomePai:      (m.NomePai      || m.nomePai      || '').toString().trim(),
+    EstadoCivil:  (m.EstadoCivil  || m.estadoCivil  || '').toString().trim(),
+    Batismo:      (m.Batismo      || m.batismo      || '').toString().trim(),
+    IgrejaOrigen: (m.IgrejaOrigen || m.igrejaOrigen || m.Igreja || m.igreja || '').toString().trim(),
+    Funcao:       (m.Funcao       || m.funcao       || '').toString().trim(),
+    Rua:          (m.Rua          || m.rua          || '').toString().trim(),
+    Numero:       (m.Numero       || m.numero       || '').toString().trim(),
+    Bairro:       (m.Bairro       || m.bairro       || '').toString().trim(),
+    Cidade:       (m.Cidade       || m.cidade       || '').toString().trim(),
+    Estado:       (m.Estado       || m.estado       || '').toString().trim(),
+    CEP:          (m.CEP          || m.cep          || '').toString().trim(),
+    Celular:      (m.Celular      || m.celular      || '').toString().trim(),
+    Email:        (m.Email        || m.email        || '').toString().trim(),
+    RG:           (m.RG           || m.rg           || '').toString().trim(),
+    CPF:          (m.CPF          || m.cpf          || '').toString().trim(),
+    Foto:         (m.Foto         || m.foto         || '').toString(),
+    FotoZoom:     parseFloat(m.FotoZoom || m.fotoZoom || 1) || 1,
+    FotoX:        parseFloat(m.FotoX    || m.fotoX    || 50) || 50,
+    FotoY:        parseFloat(m.FotoY    || m.fotoY    || 50) || 50,
+    Ativo:        (m.Ativo !== false && m.Ativo !== 'FALSE' &&
+                   m.ativo !== false && m.ativo !== 'FALSE')
+  };
+}
+
+/* ── Salva membros 1 a 1, mantém modal aberto com progresso e log de erros ── */
+function _mbImportarSequencial(lista, idx, ok, erros) {
+  var progEl = document.getElementById('mbimport-prog');
+  var okEl   = document.getElementById('mbimport-ok');
+  var erroEl = document.getElementById('mbimport-erro');
+  var barEl  = document.getElementById('mbimport-bar');
+  var logEl  = document.getElementById('mbimport-log');
+  var btnEl  = document.getElementById('mbimport-fechar');
+
+  if (progEl) progEl.textContent = idx + ' / ' + lista.length;
+  if (okEl)   okEl.textContent   = ok;
+  if (erroEl) erroEl.textContent = erros;
+  if (barEl)  barEl.style.width  = Math.round((idx / lista.length) * 100) + '%';
+
+  if (idx >= lista.length) {
+    if (progEl) progEl.textContent = lista.length + ' / ' + lista.length;
+    if (barEl)  barEl.style.width  = '100%';
+    if (btnEl)  { btnEl.disabled = false; btnEl.style.opacity = '1'; btnEl.style.cursor = 'pointer'; btnEl.textContent = 'Fechar'; }
+    if (logEl && erros === 0) {
+      logEl.innerHTML = '<div style="color:var(--success);font-size:12px;font-weight:600;padding:8px 0">✅ Todos os registros salvos com sucesso!</div>';
+    }
+    showToast('Importação concluída: ' + ok + ' salvo(s)' + (erros ? ', ' + erros + ' erro(s)' : ''), ok > 0 ? 'success' : 'error');
+    mbLoadFromSheet(function() { _mbRenderTab('lista'); });
+    return;
+  }
+
+  var membro = lista[idx];
+  mbSaveToSheet(membro, function(r) {
+    var sucesso = r && r.success !== false;
+    if (sucesso) {
+      ok++;
+      var i = MB.membros.findIndex(function(x) { return String(x.ID) === String(membro.ID); });
+      if (i >= 0) MB.membros[i] = membro; else MB.membros.push(membro);
+    } else {
+      erros++;
+      if (logEl) {
+        var li = document.createElement('div');
+        li.style.cssText = 'font-size:11px;color:var(--danger);padding:3px 0;border-bottom:1px solid var(--border)';
+        li.textContent = '✗ ' + (membro.Nome || '(sem nome)') + ' — ' + (r && r.error ? r.error : 'erro desconhecido');
+        logEl.appendChild(li);
+      }
+    }
+    _mbImportarSequencial(lista, idx + 1, ok, erros);
+  });
+}
+
 function mbImportarJSON(e) {
   var file = e.target.files[0]; if (!file) return;
   var reader = new FileReader();
-  reader.onload = function(ev){
+  reader.onload = function(ev) {
     try {
       var data = JSON.parse(ev.target.result);
-      if (!Array.isArray(data)) { showToast('Arquivo inválido — precisa ser um array JSON','error'); return; }
-      mbModalConfirm(
-        '📥 Importar Membros',
-        'Encontrei <strong>'+data.length+'</strong> fichas. Importar agora? Registros existentes com mesmo ID serão atualizados.',
-        'warning',
-        function(){
-          var maxRol = MB.membros.length ? Math.max.apply(null, MB.membros.map(function(m){ return parseInt(m.Rol||'0')||0; })) : 0;
-          var novos = data.map(function(m){
-            if (!m.Rol) { maxRol++; m.Rol = String(maxRol).padStart(4,'0'); }
-            if (!m.ID)  m.ID = Date.now()+Math.random();
-            m.Ativo = m.Ativo!==false;
-            return m;
-          });
-          /* Upsert */
-          novos.forEach(function(novo){
-            var idx = MB.membros.findIndex(function(x){ return String(x.ID)===String(novo.ID); });
-            if (idx>=0) MB.membros[idx]=novo; else MB.membros.push(novo);
-          });
-          showToast('Importação concluída: '+novos.length+' membros','success');
-          _mbRenderTab('lista');
-        }
-      );
+      if (!Array.isArray(data)) { showToast('Arquivo inválido — precisa ser um array JSON', 'error'); e.target.value = ''; return; }
+
+      var maxRol = MB.membros.length
+        ? Math.max.apply(null, MB.membros.map(function(m) { return parseInt(m.Rol || '0') || 0; }))
+        : 0;
+      var novos = data.map(function(m) {
+        var norm = _mbNormalizarRegistro(m);
+        if (!norm.Rol) { maxRol++; norm.Rol = String(maxRol).padStart(4, '0'); }
+        return norm;
+      });
+
+      /* Modal de progresso — fica aberto até o fim */
+      var id = 'mb-modal-dinamico';
+      var ex = document.getElementById(id); if (ex) ex.remove();
+      var el = document.createElement('div');
+      el.id = id; el.className = 'modal-overlay open';
+      el.innerHTML =
+        '<div class="modal-box" style="max-width:480px">' +
+          '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px">📥 Importando ' + novos.length + ' membros...</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">' +
+            '<div style="background:var(--teal-dim);border:1px solid var(--teal-border);border-radius:8px;padding:12px;text-align:center">' +
+              '<div style="font-size:20px;font-weight:800;color:var(--teal)" id="mbimport-prog">0 / ' + novos.length + '</div>' +
+              '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Progresso</div>' +
+            '</div>' +
+            '<div style="background:var(--success-dim);border:1px solid rgba(54,211,153,.25);border-radius:8px;padding:12px;text-align:center">' +
+              '<div style="font-size:20px;font-weight:800;color:var(--success)" id="mbimport-ok">0</div>' +
+              '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Salvos</div>' +
+            '</div>' +
+            '<div style="background:var(--danger-dim);border:1px solid rgba(255,94,122,.25);border-radius:8px;padding:12px;text-align:center">' +
+              '<div style="font-size:20px;font-weight:800;color:var(--danger)" id="mbimport-erro">0</div>' +
+              '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Erros</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="background:var(--border);border-radius:4px;height:6px;margin-bottom:16px;overflow:hidden">' +
+            '<div id="mbimport-bar" style="height:100%;width:0%;background:var(--teal);border-radius:4px;transition:width .3s"></div>' +
+          '</div>' +
+          '<div id="mbimport-log" style="max-height:140px;overflow-y:auto;font-size:11px;color:var(--text-muted);min-height:20px;margin-bottom:16px">' +
+            '<div>Salvando registros na planilha...</div>' +
+          '</div>' +
+          '<button id="mbimport-fechar" disabled class="btn btn-secondary btn-sm btn-full" onclick="mbModalClose()" style="opacity:.4;cursor:not-allowed">Aguarde...</button>' +
+        '</div>';
+      document.body.appendChild(el);
+
+      _mbImportarSequencial(novos, 0, 0, 0);
+
     } catch(err) {
       console.error(err);
-      showToast('Erro ao ler arquivo JSON','error');
+      showToast('Erro ao ler arquivo JSON', 'error');
     }
-    e.target.value='';
+    e.target.value = '';
   };
   reader.readAsText(file);
 }

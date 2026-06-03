@@ -1,0 +1,32 @@
+# ── Arquivos de sistema ──────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Node / npm ───────────────────────────────────────
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+
+# ── Git ──────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Clasp (não re-enviar o próprio config) ───────────
+.clasp.json
+
+# ── Docs e planejamento (não vão pro GAS) ────────────
+*.md
+README*
+docs/
+planejamento/
+
+# ── Arquivos de backup local ──────────────────────────
+*.bak
+*.old
+*_backup*
+
+# ── Variáveis de ambiente ────────────────────────────
+.env
+.env.*

@@ -1,0 +1,2002 @@
+<!-- Bibliotecas de geração de PDF/PNG (carregadas de forma assíncrona) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+
+<!-- ══════════════════════════════════════════════════════════
+     _membros.html · Módulo Membros — AD Fonte da Salvação
+     Incluído via <?!= include('_membros'); ?> no index.html
+     Arquitetura 100% espelhada em _escola-dominical.html:
+       · Prefixo mb_ / MB nas funções e estado
+       · _handleResponse  ·  _safe_mb  ·  google.script.run
+       · Topnav idêntico  ·  ed-* tokens visuais reutilizados
+       · ES5 puro — zero backticks, zero arrow functions
+════════════════════════════════════════════════════════════ -->
+
+<style>
+/* ══ TOKENS LOCAIS (reutiliza variáveis do design system) ══ */
+:root {
+  --glass-bg-premium:     linear-gradient(180deg,rgba(255,255,255,.05) 0%,rgba(255,255,255,.01) 100%);
+  --glass-border-premium: 1px solid rgba(255,255,255,.08);
+  --glass-shadow-premium: 0 12px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+}
+[data-theme="light"] {
+  --glass-bg-premium:     linear-gradient(160deg,#FFFFFF 0%,#F8FBFE 100%);
+  --glass-border-premium: 1px solid rgba(12,28,40,.07);
+  --glass-shadow-premium: 0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(15,23,42,.06);
+}
+
+/* ── Topnav module (idêntico ao ED) ── */
+.mb-topnav-module {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px; height: 40px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-glass); backdrop-filter: blur(20px);
+  position: sticky; top: 64px; z-index: 100;
+}
+.mb-topnav-module-back {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: none; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-muted);
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.mb-topnav-module-back:hover { background: var(--bg4); color: var(--text); }
+.mb-topnav-crumb-app  { font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer; }
+.mb-topnav-crumb-app:hover { color: var(--text); }
+.mb-topnav-crumb-sep  { font-size: 12px; color: var(--text-dim); }
+.mb-topnav-crumb-module { font-size: 12px; font-weight: 800; color: var(--teal); }
+.mb-topnav-crumb-tags { display: flex; gap: 6px; margin-left: auto; }
+.mb-topnav-crumb-tag  {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 100px;
+  background: var(--teal-dim); color: var(--teal); border: 1px solid var(--teal-border);
+  font-family: 'DM Mono', monospace; letter-spacing: .3px;
+}
+@media (min-width: 640px) { .mb-topnav-module { padding: 0 24px; } }
+@media (max-width: 480px) { .mb-topnav-crumb-tags { display: none; } }
+.topnav-right { overflow: visible !important; }
+
+/* ── Topnav desktop / mobile gear (idêntico ao ED) ── */
+.mb-nav-desktop { display: none; align-items: center; gap: 4px; }
+@media (min-width: 640px) { .mb-nav-desktop { display: flex; } .mb-nav-gear { display: none !important; } }
+@media (max-width: 639px) { .mb-nav-desktop { display: none !important; } }
+
+.mb-nav-cfg-wrap { position: relative; }
+.mb-nav-cfg-dd {
+  position: fixed; right: 12px; top: 56px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 16px; padding: 8px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.32); z-index: 9998;
+  min-width: 210px; display: none; flex-direction: column; gap: 2px;
+}
+.mb-nav-cfg-dd.open { display: flex; }
+.mb-nav-cfg-dd button {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 13px; border-radius: 10px; border: none;
+  background: none; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--text); text-align: left; width: 100%;
+  font-family: 'Plus Jakarta Sans', sans-serif; transition: background .15s;
+}
+.mb-nav-cfg-dd button:hover { background: var(--bg4); }
+.mb-nav-cfg-dd button.danger { color: var(--danger); }
+.mb-nav-cfg-dd button.danger:hover { background: var(--danger-dim); }
+.mb-nav-cfg-dd .divider { height: 1px; background: var(--border); margin: 4px 0; }
+.mb-nav-cfg-dd .cfg-label {
+  font-size: 10px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .07em; padding: 6px 13px 2px;
+}
+
+/* ── Tabs ── */
+.mb-tabs {
+  display: flex; gap: 4px; padding: 12px 16px 0; overflow-x: auto;
+  scrollbar-width: none;
+}
+.mb-tabs::-webkit-scrollbar { display: none; }
+.mb-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 10px 10px 0 0;
+  border: none; background: none; cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px; font-weight: 700;
+  color: var(--text-muted); white-space: nowrap;
+  transition: background .15s, color .15s;
+  border-bottom: 2px solid transparent;
+}
+.mb-tab:hover { background: var(--bg4); color: var(--text); }
+.mb-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+/* ── Panel ── */
+#mb-panel { padding: 16px; max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
+@media (min-width: 640px) { #mb-panel { padding: 20px 24px 80px; } }
+
+/* ── KPI cards (reutiliza .ed-stat-card) ── */
+.ed-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px; margin-bottom: 16px;
+}
+@media (min-width: 480px) { .ed-stats { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 960px) { .ed-stats { grid-template-columns: repeat(5, 1fr); gap: 12px; } }
+
+.ed-stat-card {
+  background: var(--glass-bg-premium); border: var(--glass-border-premium);
+  border-radius: 16px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--glass-shadow-premium);
+  transition: transform .2s, border-color .2s;
+  --kpi-text: var(--teal); --kpi-glow: var(--teal-dim); --kpi-border: var(--teal-border);
+}
+.ed-stat-card:hover { transform: translateY(-2px); border-color: var(--kpi-border); }
+.ed-stat-icon-wrap {
+  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+  background: var(--kpi-glow); border: 1px solid var(--kpi-border);
+  display: flex; align-items: center; justify-content: center;
+}
+.ed-stat-icon { width: 16px !important; height: 16px !important; color: var(--kpi-text); }
+.ed-stat-value { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.5px; }
+.ed-stat-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+
+.kpi-total    { --kpi-text: var(--teal);    --kpi-glow: rgba(0,217,198,.12); --kpi-border: rgba(0,217,198,.25); }
+.kpi-ativos   { --kpi-text: var(--success); --kpi-glow: rgba(54,211,153,.12); --kpi-border: rgba(54,211,153,.25); }
+.kpi-inativos { --kpi-text: var(--danger);  --kpi-glow: rgba(255,94,122,.12); --kpi-border: rgba(255,94,122,.25); }
+.kpi-aniv     { --kpi-text: var(--gold);    --kpi-glow: rgba(215,177,91,.12); --kpi-border: rgba(215,177,91,.25); }
+.kpi-semfoto  { --kpi-text: var(--purple);  --kpi-glow: rgba(155,124,255,.12); --kpi-border: rgba(155,124,255,.25); }
+
+/* ── Section header ── */
+.ed-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.ed-section-title  { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -.3px; }
+.ed-section-sub    { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── List ── */
+.ed-list { display: flex; flex-direction: column; gap: 6px; }
+.ed-list-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 14px;
+  background: var(--glass-bg-premium); border: var(--glass-border-premium);
+  box-shadow: var(--glass-shadow-premium); cursor: pointer;
+  transition: border-color .18s, transform .18s;
+  position: relative; overflow: hidden;
+}
+.ed-list-item::before {
+  content: ''; position: absolute; left: 0; top: 15%; bottom: 15%;
+  width: 3px; border-radius: 0 2px 2px 0;
+  background: var(--teal); transform: scaleY(0); transition: transform .18s;
+}
+.ed-list-item:hover { border-color: var(--border-strong); transform: translateX(2px); }
+.ed-list-item:hover::before { transform: scaleY(1); }
+.ed-list-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: var(--teal-dim); border: 1.5px solid var(--teal-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: var(--teal);
+  overflow: hidden;
+}
+.ed-list-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ed-list-info { flex: 1; min-width: 0; }
+.ed-list-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ed-list-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ed-aula-actions { display: flex; gap: 4px; align-items: center; }
+.ed-item-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: none; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-muted); transition: all .15s;
+}
+.ed-item-btn:hover { background: var(--bg4); color: var(--text); }
+.ed-item-btn.danger:hover { background: var(--danger-dim); color: var(--danger); border-color: rgba(255,94,122,.3); }
+
+/* ── Search ── */
+.ed-search-wrap { position: relative; }
+.ed-search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-muted); display: flex; }
+.ed-search { width: 100%; height: 42px; padding: 0 14px 0 38px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg-glass); color: var(--text); font-family: 'Plus Jakarta Sans',sans-serif; font-size: 13px; }
+.ed-search:focus { outline: none; border-color: rgba(0,217,198,.45); }
+.ed-filter-select { height: 42px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg-glass); color: var(--text); font-family: 'Plus Jakarta Sans',sans-serif; font-size: 13px; }
+
+/* ── Empty state ── */
+.mb-empty { text-align: center; padding: 56px 24px; color: var(--text-muted); }
+.mb-empty-icon { font-size: 44px; margin-bottom: 12px; display: block; opacity: .4; }
+.mb-empty-title { font-size: 16px; font-weight: 800; color: var(--text); }
+.mb-empty-sub   { font-size: 13px; margin-top: 6px; line-height: 1.6; }
+
+/* ── Formulário ── */
+.mb-form-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
+@media (min-width: 640px) { .mb-form-grid { grid-template-columns: 1fr 1fr; column-gap: 16px; } }
+.mb-form-full { grid-column: 1 / -1; }
+.mb-form-section {
+  grid-column: 1 / -1;
+  font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--teal); padding: 8px 0 6px;
+  border-bottom: 1px solid var(--teal-border); margin: 8px 0 4px;
+}
+
+/* ── Foto upload/preview ── */
+.mb-foto-btn {
+  width: 100%; height: 48px; border-radius: 12px;
+  background: var(--bg-glass); border: 1.5px dashed var(--border);
+  color: var(--text-muted); font-family: 'Plus Jakarta Sans',sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: border-color .2s, background .2s;
+}
+.mb-foto-btn:hover { border-color: var(--teal); background: var(--teal-dim); color: var(--teal); }
+.mb-foto-preview {
+  width: 64px; height: 84px; border-radius: 8px; overflow: hidden;
+  border: 2px solid var(--border); flex-shrink: 0; background: var(--bg4);
+  position: relative;
+}
+.mb-foto-preview img { width: 100%; height: 100%; object-fit: cover; }
+.mb-foto-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.mb-foto-remove {
+  position: absolute; top: 2px; right: 2px;
+  background: var(--danger); color: #fff; border: none; cursor: pointer;
+  width: 16px; height: 16px; border-radius: 50%;
+  font-size: 10px; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Detalhe ── */
+.mb-detail-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 480px) { .mb-detail-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 768px) { .mb-detail-grid { grid-template-columns: 1fr 1fr 1fr; } }
+.mb-detail-label { font-size: 10px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
+.mb-detail-value { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
+
+/* ── Modal confirm (reutiliza modal-overlay do design system) ── */
+#modal-mb-confirm .modal-box { max-width: 400px; }
+
+/* ── Aniversariantes ── */
+.mb-bday-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 12px;
+  background: var(--glass-bg-premium); border: var(--glass-border-premium);
+  cursor: pointer; transition: border-color .2s;
+}
+.mb-bday-card:hover { border-color: rgba(215,177,91,.4); }
+.mb-bday-card.hoje  { border-color: rgba(215,177,91,.5); background: rgba(215,177,91,.06); }
+
+/* ── Print ── */
+@media print {
+  @page { size: A4; margin: 0; }
+  .no-print { display: none !important; }
+}
+</style>
+
+<!-- Modal de confirmação (shared) -->
+<div class="modal-overlay" id="modal-mb-confirm">
+  <div class="modal-box">
+    <div style="text-align:center;font-size:36px;margin-bottom:12px">⚠️</div>
+    <div id="mb-confirm-title" style="font-size:16px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px"></div>
+    <div id="mb-confirm-body"  style="font-size:13px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:20px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary btn-full" id="mb-confirm-cancel">Cancelar</button>
+      <button class="btn btn-danger btn-full"    id="mb-confirm-ok">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   MÓDULO MEMBROS — lógica de frontend
+   Prefixo MB / mb_ — nunca colide com ED / ed_
+══════════════════════════════════════════════════════════ */
+
+// ── Estado global do módulo ──────────────────────────────
+var MB = {
+  membros:  [],
+  tab:      'lista',
+  search:   '',
+  filtroAtivo: 'todos',   // 'todos' | 'ativos' | 'inativos'
+  editId:   null,
+  selected: null,
+  fotoData: '',
+  fotoZoom: 1,
+  fotoX:    50,
+  fotoY:    50,
+  proximoRol: '0001'
+};
+
+var _mbConfirmCb = null;
+
+// ── Escape HTML ──────────────────────────────────────────
+function _mbEsc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Trata resposta do servidor (igual ao _handleResponse da ED) ──
+function _mbHandleResponse(r, ctx) {
+  if (!r) { showToast('Sem resposta do servidor (' + ctx + ').','error'); return false; }
+  if (!r.success) {
+    var msg = r.error || 'Erro desconhecido';
+    if (msg.indexOf('Sess') !== -1 || msg.indexOf('xpirada') !== -1 || msg.indexOf('utorizado') !== -1) {
+      showToast('Sessão expirada. Faça login novamente.','error');
+      setTimeout(function(){ navigateTo('login'); }, 1500);
+      return false;
+    }
+    showToast(msg,'error');
+    return false;
+  }
+  return true;
+}
+
+// ── Utilitários de data / máscara ────────────────────────
+function _mbMaskDate(v) {
+  var d = v.replace(/\D/g,'').slice(0,8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return d.slice(0,2)+'/'+d.slice(2);
+  return d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
+}
+function _mbMaskPhone(v) {
+  var d = v.replace(/\D/g,'').slice(0,11);
+  if (d.length <= 2) return d;
+  if (d.length <= 7) return '('+d.slice(0,2)+') '+d.slice(2);
+  return '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);
+}
+function _mbMaskCEP(v) {
+  var d = v.replace(/\D/g,'').slice(0,8);
+  if (d.length <= 5) return d;
+  return d.slice(0,5)+'-'+d.slice(5);
+}
+function _mbParseDate(s) {
+  if (!s) return null;
+  var p = String(s).split('/');
+  if (p.length < 3) return null;
+  return new Date(p[2], p[1]-1, p[0]);
+}
+function _mbIsHoje(s) {
+  var d = _mbParseDate(s); if (!d) return false;
+  var t = new Date();
+  return d.getDate()===t.getDate() && d.getMonth()===t.getMonth();
+}
+function _mbNesteMes(s) {
+  var d = _mbParseDate(s); if (!d) return false;
+  return d.getMonth() === new Date().getMonth();
+}
+function _mbDiasAniv(s) {
+  var d = _mbParseDate(s); if (!d) return null;
+  var t = new Date();
+  var prox = new Date(t.getFullYear(), d.getMonth(), d.getDate());
+  if (prox < t) prox.setFullYear(t.getFullYear()+1);
+  return Math.ceil((prox - t) / 864e5);
+}
+function _mbIdade(s) {
+  var d = _mbParseDate(s); if (!d) return null;
+  var t = new Date(), a = t.getFullYear()-d.getFullYear();
+  var m = t.getMonth()-d.getMonth();
+  if (m < 0 || (m===0 && t.getDate()<d.getDate())) a--;
+  return a;
+}
+function _mbInitials(nome) {
+  if (!nome) return '?';
+  var p = nome.trim().split(' ');
+  if (p.length === 1) return p[0][0].toUpperCase();
+  return (p[0][0]+p[p.length-1][0]).toUpperCase();
+}
+
+// ── Carregamento de dados do servidor ───────────────────
+function _mbLoad(cb) {
+  var token = App.session && App.session.token;
+  if (!token) { showToast('Sessão inválida.','error'); navigateTo('login'); return; }
+  var panel = document.getElementById('mb-panel');
+  if (panel) panel.innerHTML = '<div style="padding:48px;text-align:center"><div class="loader-spinner" style="margin:0 auto"></div></div>';
+  google.script.run
+    .withFailureHandler(function(e){ showToast((e&&e.message)||'Erro ao carregar membros.','error'); })
+    .withSuccessHandler(function(r) {
+      if (!_mbHandleResponse(r,'listarMembros')) return;
+      MB.membros = r.data || [];
+      if (cb) cb();
+    })
+    .mb_listarMembros(token);
+}
+
+function _mbLoadProximoRol(cb) {
+  var token = App.session && App.session.token;
+  google.script.run
+    .withFailureHandler(function(){ if(cb) cb('0001'); })
+    .withSuccessHandler(function(r) {
+      MB.proximoRol = (r && r.success && r.data) ? r.data : '0001';
+      if (cb) cb(MB.proximoRol);
+    })
+    .mb_getProximoRol(token);
+}
+
+// ── Topnav (espelha _buildEdPage da ED) ─────────────────
+function _mbBuildTopnav() {
+  var sess = App.session;
+  var ct   = document.documentElement.getAttribute('data-theme') || 'dark';
+  var ti   = ct === 'dark' ? 'moon' : 'sun';
+  return (
+    '<nav class="topnav no-print">'+
+      '<div class="topnav-left" onclick="navigateTo(\'home\')" style="cursor:pointer">'+
+        '<div class="topnav-logo-icon">'+
+          '<img src="" alt="Logo" class="app-logo-img" style="width:28px;height:28px;object-fit:contain">'+
+        '</div>'+
+        '<div>'+
+          '<div class="topnav-logo-name">AD Fonte da Salvação</div>'+
+          '<div class="topnav-logo-sub">Gestão Ministerial</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="topnav-actions">'+
+        /* Desktop */
+        '<div class="mb-nav-desktop">'+
+          '<button class="theme-toggle-btn btn btn-ghost btn-sm" style="width:40px;padding:0" onclick="toggleTheme()">'+
+            '<i data-lucide="'+ti+'" style="width:18px;height:18px"></i>'+
+          '</button>'+
+          '<div style="position:relative">'+
+            '<button class="topnav-avatar-btn" onclick="toggleUserDropdown()" id="avatar-btn">'+
+              '<div class="avatar">'+_mbInitials(sess ? sess.nome : '?')+'</div>'+
+            '</button>'+
+            '<div class="user-dropdown" id="user-dropdown">'+
+              '<div class="user-dd-header">'+
+                '<div class="user-dd-nome">'+_mbEsc(sess ? sess.nome : '')+'</div>'+
+                '<div class="user-dd-email">'+_mbEsc(sess ? sess.email : '')+'</div>'+
+                '<div style="margin-top:6px"><span class="badge badge-teal">'+_mbEsc(sess ? sess.perfil : '')+'</span></div>'+
+              '</div>'+
+              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
+                '<i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Dashboard'+
+              '</button>'+
+              '<button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">'+
+                '<i data-lucide="key" style="width:16px;height:16px"></i> Alterar senha'+
+              '</button>'+
+              '<hr class="divider" style="margin:6px 0">'+
+              '<button class="user-dd-item danger" onclick="handleLogout()">'+
+                '<i data-lucide="log-out" style="width:16px;height:16px"></i> Sair'+
+              '</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        /* Mobile gear */
+        '<div class="mb-nav-cfg-wrap mb-nav-gear">'+
+          '<button class="btn btn-ghost btn-sm" style="width:38px;padding:0" onclick="mbToggleNavCfg(event)">'+
+            '<i data-lucide="settings-2" style="width:18px;height:18px"></i>'+
+          '</button>'+
+          '<div class="mb-nav-cfg-dd" id="mb-nav-cfg-dd">'+
+            '<div class="cfg-label">Conta</div>'+
+            '<button onclick="mbToggleNavCfg();toggleTheme()">'+
+              '<i data-lucide="'+ti+'" style="width:15px;height:15px"></i> '+(ct==='dark'?'Modo claro':'Modo escuro')+
+            '</button>'+
+            '<div class="divider"></div>'+
+            '<button onclick="mbToggleNavCfg();navigateTo(\'home\')">'+
+              '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
+            '</button>'+
+            '<button onclick="mbToggleNavCfg();showTrocarSenha()">'+
+              '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
+            '</button>'+
+            '<div class="divider"></div>'+
+            '<button class="danger" onclick="handleLogout()">'+
+              '<i data-lucide="log-out" style="width:15px;height:15px"></i> Sair'+
+            '</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</nav>'+
+    /* Breadcrumb (idêntico ao ED) */
+    '<div class="mb-topnav-module no-print">'+
+      '<button class="mb-topnav-module-back" onclick="navigateTo(\'home\')" title="Voltar">'+
+        '<i data-lucide="arrow-left" style="width:14px;height:14px"></i>'+
+      '</button>'+
+      '<span class="mb-topnav-crumb-app" onclick="navigateTo(\'home\')">Gestão Ministerial</span>'+
+      '<span class="mb-topnav-crumb-sep">/</span>'+
+      '<span class="mb-topnav-crumb-module">Membros</span>'+
+      '<div class="mb-topnav-crumb-tags">'+
+        '<span class="mb-topnav-crumb-tag">CRUD</span>'+
+        '<span class="mb-topnav-crumb-tag">ROL Auto</span>'+
+        '<span class="mb-topnav-crumb-tag">Carteirinha</span>'+
+      '</div>'+
+    '</div>'
+  );
+}
+
+// ── Tabs bar ─────────────────────────────────────────────
+function _mbBuildTabs() {
+  var tabs = [['lista','users','Membros'],['form','user-plus','Novo Membro'],['carteirinha','credit-card','Carteirinhas']];
+  return '<div class="mb-tabs no-print">'+
+    tabs.map(function(t){
+      return '<button class="mb-tab'+(MB.tab===t[0]?' active':'')+'" onclick="mbSetTab(\''+t[0]+'\')">'+
+        '<i data-lucide="'+t[1]+'" style="width:14px;height:14px"></i>'+t[2]+'</button>';
+    }).join('')+
+  '</div>';
+}
+
+// ── Render principal ─────────────────────────────────────
+function renderMembros() {
+  if (!App.session) { navigateTo('login'); return; }
+  MB.tab = 'lista'; MB.editId = null; MB.selected = null;
+  MB.search = ''; MB.filtroAtivo = 'todos';
+  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+
+  renderView(
+    _mbBuildTopnav() +
+    _mbBuildTabs()   +
+    '<div id="mb-panel" style="padding:16px;max-width:1100px;margin:0 auto;padding-bottom:80px"></div>' +
+    _mbModalConfirmHtml()
+  );
+
+  setTimeout(function(){
+    if (window.lucide) lucide.createIcons();
+    applyLogoSrc();
+    _mbLoad(function(){ _mbRenderPanel(); });
+  }, 0);
+}
+
+// ── setTab ───────────────────────────────────────────────
+function mbSetTab(tab) {
+  MB.tab = tab;
+  document.querySelectorAll('.mb-tab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('"+tab+"')");
+  });
+  if (tab === 'lista') {
+    _mbLoad(function(){ _mbRenderPanel(); });
+  } else if (tab === 'form') {
+    MB.editId = null; MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+    _mbLoadProximoRol(function(){ _mbRenderPanel(); });
+  } else if (tab === 'carteirinha') {
+    MB.cardSelected = null; MB.cardSelecionados = {}; MB.cardSearch = '';
+    _mbLoad(function(){ _mbRenderPanel(); });
+  }
+}
+
+// ── Despacha para o render certo ────────────────────────
+function _mbRenderPanel() {
+  var panel = document.getElementById('mb-panel');
+  if (!panel) return;
+  if (MB.tab === 'lista')   panel.innerHTML = _mbBuildLista();
+  if (MB.tab === 'form')    panel.innerHTML = _mbBuildForm();
+  if (MB.tab === 'detalhe')      panel.innerHTML = _mbBuildDetalhe();
+  if (MB.tab === 'carteirinha') panel.innerHTML = _mbBuildCarteirinha();
+  if (window.lucide) lucide.createIcons();
+}
+
+// ════════════════════════════════════════════
+//  ABA: LISTA
+// ════════════════════════════════════════════
+function _mbBuildLista() {
+  var lista = MB.membros.filter(function(m){
+    var q = (MB.search || '').toLowerCase();
+    var ok = !q ||
+      (m.nome||'').toLowerCase().indexOf(q) !== -1 ||
+      (m.rol||'').toLowerCase().indexOf(q) !== -1 ||
+      (m.funcao||'').toLowerCase().indexOf(q) !== -1 ||
+      (m.celular||'').indexOf(q) !== -1;
+    if (MB.filtroAtivo === 'ativos')   return ok && m.ativo !== false;
+    if (MB.filtroAtivo === 'inativos') return ok && m.ativo === false;
+    return ok;
+  });
+
+  var total    = MB.membros.length;
+  var ativos   = MB.membros.filter(function(m){ return m.ativo !== false; }).length;
+  var inativos = total - ativos;
+  var aniv     = MB.membros.filter(function(m){ return _mbNesteMes(m.nascimento); }).length;
+  var semFoto  = MB.membros.filter(function(m){ return !m.foto; }).length;
+
+  // KPIs
+  var kpis =
+    '<div class="ed-stats">'+
+      _mbKpi('kpi-total',    'users',        total,    'Total')+
+      _mbKpi('kpi-ativos',   'check-circle', ativos,   'Ativos')+
+      _mbKpi('kpi-inativos', 'x-circle',     inativos, 'Inativos')+
+      _mbKpi('kpi-aniv',     'cake',         aniv,     'Aniv. mês')+
+      _mbKpi('kpi-semfoto',  'image-off',    semFoto,  'Sem foto')+
+    '</div>';
+
+  // Aniversariantes do mês
+  var anivHtml = _mbBuildAniversariantes();
+
+  // Toolbar
+  var toolbar =
+    '<div class="ed-section-header">'+
+      '<div>'+
+        '<div class="ed-section-title">Todos os Membros</div>'+
+        '<div class="ed-section-sub">'+lista.length+' resultado(s) de '+total+' cadastrado(s)</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="btn btn-primary btn-sm" onclick="mbNovoMembro()">'+
+          '<i data-lucide="user-plus" style="width:15px;height:15px"></i>'+
+          '<span>Novo Membro</span>'+
+        '</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="mbExportarJSON()" title="Exportar backup JSON">'+
+          '<i data-lucide="download" style="width:15px;height:15px"></i>'+
+        '</button>'+
+        '<label class="btn btn-ghost btn-sm" title="Importar backup JSON" style="cursor:pointer">'+
+          '<i data-lucide="upload" style="width:15px;height:15px"></i>'+
+          '<input type="file" accept=".json" onchange="mbImportarJSON(event)" style="display:none">'+
+        '</label>'+
+      '</div>'+
+    '</div>';
+
+  // Busca + filtro
+  var busca =
+    '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
+      '<div class="ed-search-wrap" style="flex:1;min-width:180px">'+
+        '<span class="ed-search-icon"><i data-lucide="search" style="width:15px;height:15px"></i></span>'+
+        '<input class="ed-search" type="text" placeholder="Buscar nome, ROL, função..." value="'+_mbEsc(MB.search)+'" oninput="MB.search=this.value;_mbRenderPanel()">'+
+      '</div>'+
+      '<select class="ed-filter-select" onchange="MB.filtroAtivo=this.value;_mbRenderPanel()">'+
+        '<option value="todos"'   +(MB.filtroAtivo==='todos'   ?' selected':'')+'>Todos</option>'+
+        '<option value="ativos"'  +(MB.filtroAtivo==='ativos'  ?' selected':'')+'>Ativos</option>'+
+        '<option value="inativos"'+(MB.filtroAtivo==='inativos'?' selected':'')+'>Inativos</option>'+
+      '</select>'+
+    '</div>';
+
+  // Lista
+  var listaHtml;
+  if (!lista.length) {
+    listaHtml =
+      '<div class="mb-empty">'+
+        '<span class="mb-empty-icon">📋</span>'+
+        '<div class="mb-empty-title">'+(total===0?'Nenhum membro cadastrado':'Nenhum resultado encontrado')+'</div>'+
+        '<div class="mb-empty-sub">'+(total===0?'Clique em "Novo Membro" para começar.':'Tente ajustar os filtros ou a busca.')+'</div>'+
+      '</div>';
+  } else {
+    listaHtml = '<div class="ed-list">';
+    lista.forEach(function(m){
+      var ativo   = m.ativo !== false;
+      var bdHoje  = _mbIsHoje(m.nascimento);
+      var inicial = (m.nome||'?')[0].toUpperCase();
+      listaHtml +=
+        '<div class="ed-list-item" onclick="mbVerDetalhe(\''+_mbEsc(m.id)+'\')">'+
+          '<div class="ed-list-avatar">'+
+            (m.foto ? '<img src="'+_mbEsc(m.foto)+'" alt="'+_mbEsc(m.nome)+'" style="transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">' : _mbEsc(inicial))+
+          '</div>'+
+          '<div class="ed-list-info">'+
+            '<div class="ed-list-name">'+
+              _mbEsc(m.nome||'—')+
+              (bdHoje ? ' 🎂' : '')+
+              (!m.foto ? ' <span class="badge badge-purple" style="font-size:9px;padding:1px 6px">SEM FOTO</span>' : '')+
+            '</div>'+
+            '<div class="ed-list-meta">ROL '+_mbEsc(m.rol||'—')+' · '+_mbEsc(m.funcao||'Membro')+' · '+_mbEsc(m.cidade||'')+'/'+_mbEsc(m.estado||'')+'</div>'+
+          '</div>'+
+          '<span class="badge '+(ativo?'badge-green':'badge-red')+'">'+(ativo?'Ativo':'Inativo')+'</span>'+
+          '<div class="ed-aula-actions">'+
+            '<button class="ed-item-btn" onclick="event.stopPropagation();mbEditarMembro(\''+_mbEsc(m.id)+'\')" title="Editar">'+
+              '<i data-lucide="pencil" style="width:13px;height:13px"></i>'+
+            '</button>'+
+            '<button class="ed-item-btn danger" onclick="event.stopPropagation();mbConfirmarDeletar(\''+_mbEsc(m.id)+'\')" title="Excluir">'+
+              '<i data-lucide="trash-2" style="width:13px;height:13px"></i>'+
+            '</button>'+
+          '</div>'+
+        '</div>';
+    });
+    listaHtml += '</div>';
+  }
+
+  return kpis + anivHtml + toolbar + busca + listaHtml;
+}
+
+function _mbKpi(klass, icon, val, label) {
+  return '<div class="ed-stat-card '+klass+'">'+
+    '<div class="ed-stat-icon-wrap"><i data-lucide="'+icon+'" class="ed-stat-icon"></i></div>'+
+    '<div><div class="ed-stat-value">'+val+'</div><div class="ed-stat-label">'+label+'</div></div>'+
+  '</div>';
+}
+
+function _mbBuildAniversariantes() {
+  var lista = MB.membros.filter(function(m){ return _mbNesteMes(m.nascimento); })
+    .sort(function(a,b){ return (_mbDiasAniv(a.nascimento)||999)-(_mbDiasAniv(b.nascimento)||999); });
+  if (!lista.length) return '';
+  var html =
+    '<div style="background:var(--glass-bg-premium);border:var(--glass-border-premium);border-radius:16px;padding:16px;backdrop-filter:blur(14px);margin-bottom:16px">'+
+    '<div class="ed-section-header" style="margin-bottom:10px">'+
+      '<div><div class="ed-section-title">🎂 Aniversariantes do Mês</div></div>'+
+      '<span class="badge badge-gold">'+lista.length+'</span>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">';
+  lista.forEach(function(m){
+    var dias = _mbDiasAniv(m.nascimento);
+    var hoje = dias === 0;
+    html +=
+      '<div class="mb-bday-card'+(hoje?' hoje':'')+'\" onclick="mbVerDetalhe(\''+_mbEsc(m.id)+'\')">'+
+        '<div class="ed-list-avatar">'+
+          (m.foto ? '<img src="'+_mbEsc(m.foto)+'">' : _mbEsc((m.nome||'?')[0].toUpperCase()))+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">'+_mbEsc(m.nome)+'</div>'+
+          '<div style="font-size:11px;color:var(--text-muted)">'+_mbEsc(m.nascimento)+' · Fará '+(((_mbIdade(m.nascimento)||0)+1))+' anos</div>'+
+        '</div>'+
+        '<span class="badge '+(hoje?'badge-gold':'badge-teal')+'">'+
+          (hoje?'🎉 HOJE!':dias+' dia'+(dias!==1?'s':''))+
+        '</span>'+
+      '</div>';
+  });
+  return html+'</div></div>';
+}
+
+// ── Navegação interna ────────────────────────────────────
+function mbNovoMembro() {
+  MB.tab = 'form'; MB.editId = null;
+  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+  document.querySelectorAll('.mb-tab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('form')");
+  });
+  _mbLoadProximoRol(function(){ _mbRenderPanel(); });
+}
+
+function mbEditarMembro(id) {
+  var m = MB.membros.filter(function(x){ return String(x.id)===String(id); })[0];
+  if (!m) return;
+  MB.editId   = id;
+  MB.fotoData = m.foto   || '';
+  MB.fotoZoom = parseFloat(m.fotoZoom) || 1;
+  MB.fotoX    = parseFloat(m.fotoX)    || 50;
+  MB.fotoY    = parseFloat(m.fotoY)    || 50;
+  MB.tab = 'form';
+  document.querySelectorAll('.mb-tab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('form')");
+  });
+  _mbRenderPanel();
+}
+
+function mbVerDetalhe(id) {
+  MB.selected = MB.membros.filter(function(m){ return String(m.id)===String(id); })[0] || null;
+  if (!MB.selected) return;
+  MB.tab = 'detalhe';
+  _mbRenderPanel();
+}
+
+// ════════════════════════════════════════════
+//  ABA: FORMULÁRIO (novo / editar)
+// ════════════════════════════════════════════
+var MB_ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
+  'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+function _mbBuildForm() {
+  var m = MB.editId
+    ? (MB.membros.filter(function(x){ return String(x.id)===String(MB.editId); })[0] || {})
+    : {};
+  var v = function(k){ return _mbEsc(m[k]||''); };
+  var rol = MB.editId ? (m.rol||'') : MB.proximoRol;
+  var selSexo = function(o){ return m.sexo===o?' selected':''; };
+  var selEC   = function(o){ return m.estadoCivil===o?' selected':''; };
+  var selUF   = function(o){ return m.estado===o?' selected':''; };
+
+  return (
+    /* Breadcrumb interno */
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'+
+      '<button class="btn btn-ghost btn-sm" onclick="MB.tab=\'lista\';_mbLoad(function(){_mbRenderPanel();})">'+
+        '<i data-lucide="arrow-left" style="width:16px;height:16px"></i>'+
+      '</button>'+
+      '<div>'+
+        '<div class="ed-section-title">'+(MB.editId?'✏️ Editar Membro':'➕ Novo Membro')+'</div>'+
+        '<div class="ed-section-sub">'+(MB.editId?'Atualize os dados':'Preencha o cadastro completo')+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    '<div style="background:var(--glass-bg-premium);border:var(--glass-border-premium);border-radius:18px;padding:20px;backdrop-filter:blur(20px)">'+
+    '<div class="mb-form-grid" id="mb-form">'+
+
+      /* Identificação */
+      '<div class="mb-form-section">Identificação</div>'+
+      '<div class="field">'+
+        '<label>ROL</label>'+
+        '<input type="text" id="mbf-rol" value="'+rol+'" placeholder="0001">'+
+      '</div>'+
+      '<div class="field mb-form-full">'+
+        '<label>Nome Completo <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-nome" value="'+v('nome')+'" placeholder="Nome completo">'+
+        '<div class="field-error" id="mbfe-nome">Campo obrigatório</div>'+
+      '</div>'+
+
+      /* Dados pessoais */
+      '<div class="mb-form-section">Dados Pessoais</div>'+
+      '<div class="field">'+
+        '<label>Sexo <span style="color:var(--danger)">*</span></label>'+
+        '<select id="mbf-sexo">'+
+          '<option value="">Selecione</option>'+
+          '<option value="Masculino"'+selSexo('Masculino')+'>Masculino</option>'+
+          '<option value="Feminino"'+selSexo('Feminino')+'>Feminino</option>'+
+        '</select>'+
+        '<div class="field-error" id="mbfe-sexo">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Nascimento <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-nascimento" value="'+v('nascimento')+'" placeholder="DD/MM/AAAA" maxlength="10" oninput="this.value=_mbMaskDate(this.value)">'+
+        '<div class="field-error" id="mbfe-nascimento">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Nome da Mãe <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-nomeMae" value="'+v('nomeMae')+'" placeholder="Nome da mãe">'+
+        '<div class="field-error" id="mbfe-nomeMae">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Nome do Pai <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-nomePai" value="'+v('nomePai')+'" placeholder="Nome do pai">'+
+        '<div class="field-error" id="mbfe-nomePai">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Estado Civil <span style="color:var(--danger)">*</span></label>'+
+        '<select id="mbf-estadoCivil">'+
+          '<option value="">Selecione</option>'+
+          ['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável'].map(function(o){
+            return '<option value="'+o+'"'+selEC(o)+'>'+o+'</option>';
+          }).join('')+
+        '</select>'+
+        '<div class="field-error" id="mbfe-estadoCivil">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field"><label>RG</label><input type="text" id="mbf-rg" value="'+v('rg')+'" placeholder="MG-0000000"></div>'+
+      '<div class="field"><label>CPF</label><input type="text" id="mbf-cpf" value="'+v('cpf')+'" placeholder="000.000.000-00"></div>'+
+
+      /* Eclesiástico */
+      '<div class="mb-form-section">Dados Eclesiásticos</div>'+
+      '<div class="field">'+
+        '<label>Data de Batismo <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-batismo" value="'+v('batismo')+'" placeholder="DD/MM/AAAA" maxlength="10" oninput="this.value=_mbMaskDate(this.value)">'+
+        '<div class="field-error" id="mbfe-batismo">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Igreja de Batismo <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-Igreja" value="'+v('Igreja')+'" placeholder="Nome da igreja">'+
+        '<div class="field-error" id="mbfe-Igreja">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field mb-form-full">'+
+        '<label>Função na Igreja <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-funcao" value="'+v('funcao')+'" placeholder="Membro, Diácono, Pastor...">'+
+        '<div class="field-error" id="mbfe-funcao">Campo obrigatório</div>'+
+      '</div>'+
+
+      /* Endereço */
+      '<div class="mb-form-section">Endereço</div>'+
+      '<div class="field">'+
+        '<label>Rua <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-rua" value="'+v('rua')+'" placeholder="Nome da rua">'+
+        '<div class="field-error" id="mbfe-rua">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Número <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-numero" value="'+v('numero')+'" placeholder="123">'+
+        '<div class="field-error" id="mbfe-numero">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Bairro <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-bairro" value="'+v('bairro')+'" placeholder="Nome do bairro">'+
+        '<div class="field-error" id="mbfe-bairro">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Cidade <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-cidade" value="'+v('cidade')+'" placeholder="Betim">'+
+        '<div class="field-error" id="mbfe-cidade">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>Estado <span style="color:var(--danger)">*</span></label>'+
+        '<select id="mbf-estado">'+
+          '<option value="">UF</option>'+
+          MB_ESTADOS.map(function(uf){ return '<option value="'+uf+'"'+selUF(uf)+'>'+uf+'</option>'; }).join('')+
+        '</select>'+
+        '<div class="field-error" id="mbfe-estado">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field">'+
+        '<label>CEP <span style="color:var(--danger)">*</span></label>'+
+        '<input type="text" id="mbf-cep" value="'+v('cep')+'" placeholder="00000-000" maxlength="9" oninput="this.value=_mbMaskCEP(this.value)">'+
+        '<div class="field-error" id="mbfe-cep">Campo obrigatório</div>'+
+      '</div>'+
+
+      /* Contato */
+      '<div class="mb-form-section">Contato</div>'+
+      '<div class="field">'+
+        '<label>Celular <span style="color:var(--danger)">*</span></label>'+
+        '<input type="tel" id="mbf-celular" value="'+v('celular')+'" placeholder="(31) 99999-9999" maxlength="15" oninput="this.value=_mbMaskPhone(this.value)">'+
+        '<div class="field-error" id="mbfe-celular">Campo obrigatório</div>'+
+      '</div>'+
+      '<div class="field"><label>E-mail</label><input type="email" id="mbf-email" value="'+v('email')+'" placeholder="email@exemplo.com"></div>'+
+
+      /* Foto */
+      '<div class="mb-form-section mb-form-full">Foto 3×4</div>'+
+      '<div class="mb-form-full">'+
+        '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">'+
+          '<div style="flex:1;min-width:180px">'+
+            '<input type="file" id="mb-foto-input" accept="image/*" style="display:none" onchange="mbFotoChange(event)">'+
+            '<button type="button" class="mb-foto-btn" onclick="document.getElementById(\'mb-foto-input\').click()">'+
+              '<i data-lucide="camera" style="width:16px;height:16px"></i> Escolher foto'+
+            '</button>'+
+            '<div id="mb-zoom-wrap" style="margin-top:10px;display:'+(MB.fotoData?'block':'none')+'">'+
+              '<div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Zoom</div>'+
+              '<input type="range" min="1" max="3" step="0.1" value="'+MB.fotoZoom+'" oninput="MB.fotoZoom=parseFloat(this.value);mbAtualizarFotoPreview()" style="width:100%">'+
+            '</div>'+
+          '</div>'+
+          '<div>'+
+            '<div style="font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Preview</div>'+
+            '<div class="mb-foto-preview" id="mb-foto-preview" onmousedown="mbFotoMouseDown(event)" style="cursor:'+(MB.fotoData?'grab':'default')+'">'+
+              (MB.fotoData
+                ? '<img id="mb-foto-img" src="'+MB.fotoData+'" style="transform:scale('+MB.fotoZoom+');object-position:'+MB.fotoX+'% '+MB.fotoY+'%">'+
+                  '<button class="mb-foto-remove" onclick="event.stopPropagation();mbRemoverFoto()" title="Remover">✕</button>'
+                : '<div class="mb-foto-placeholder">👤</div>')+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+    '</div>'+ /* end form-grid */
+
+    /* Status (só para edição) */
+    (MB.editId ? (function(){
+      var mAtual = MB.membros.filter(function(x){ return String(x.id)===String(MB.editId); })[0] || {};
+      var ativo  = mAtual.ativo !== false;
+      return '<div class="field" style="margin-top:16px">'+
+        '<label>Status</label>'+
+        '<select id="mbf-ativo">'+
+          '<option value="true"'  +(ativo?' selected':'')+'>Ativo</option>'+
+          '<option value="false"' +(!ativo?' selected':'')+'>Inativo</option>'+
+        '</select>'+
+      '</div>';
+    })() : '')+
+
+    /* Botões */
+    '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">'+
+      '<button class="btn btn-primary btn-lg" onclick="mbSalvarForm()" style="flex:1">'+
+        '<i data-lucide="save" style="width:17px;height:17px"></i>'+
+        '<span class="btn-text">'+(MB.editId?'Salvar Alterações':'Cadastrar Membro')+'</span>'+
+        '<div class="btn-spinner"></div>'+
+      '</button>'+
+      '<button class="btn btn-secondary" onclick="MB.tab=\'lista\';_mbLoad(function(){_mbRenderPanel();})">Cancelar</button>'+
+    '</div>'+
+    '</div>'
+  );
+}
+
+/* ── Foto handlers ── */
+function mbFotoChange(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onloadend = function(){
+    MB.fotoData = reader.result;
+    mbAtualizarFotoPreview();
+    var zw = document.getElementById('mb-zoom-wrap');
+    if (zw) zw.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function mbAtualizarFotoPreview() {
+  var wrap = document.getElementById('mb-foto-preview');
+  if (!wrap) return;
+  if (MB.fotoData) {
+    wrap.innerHTML =
+      '<img id="mb-foto-img" src="'+MB.fotoData+'" style="transform:scale('+MB.fotoZoom+');object-position:'+MB.fotoX+'% '+MB.fotoY+'%">'+
+      '<button class="mb-foto-remove" onclick="event.stopPropagation();mbRemoverFoto()">✕</button>';
+    wrap.style.cursor = 'grab';
+  } else {
+    wrap.innerHTML = '<div class="mb-foto-placeholder">👤</div>';
+    wrap.style.cursor = 'default';
+  }
+}
+function mbRemoverFoto() {
+  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+  mbAtualizarFotoPreview();
+  var zw = document.getElementById('mb-zoom-wrap'); if (zw) zw.style.display = 'none';
+}
+function mbFotoMouseDown(e) {
+  if (!MB.fotoData) return;
+  var start = { x: e.clientX, y: e.clientY };
+  var wrap  = document.getElementById('mb-foto-preview');
+  if (wrap) wrap.style.cursor = 'grabbing';
+  function move(ev) {
+    var dx = (ev.clientX - start.x) * 0.4, dy = (ev.clientY - start.y) * 0.4;
+    MB.fotoX = Math.max(0, Math.min(100, MB.fotoX + dx));
+    MB.fotoY = Math.max(0, Math.min(100, MB.fotoY + dy));
+    start = { x: ev.clientX, y: ev.clientY };
+    var img = document.getElementById('mb-foto-img');
+    if (img) img.style.objectPosition = MB.fotoX + '% ' + MB.fotoY + '%';
+  }
+  function up() {
+    var w = document.getElementById('mb-foto-preview');
+    if (w) w.style.cursor = 'grab';
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+  }
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+/* ── Salvar formulário ── */
+function mbSalvarForm() {
+  var campos = ['nome','sexo','nascimento','nomeMae','nomePai','estadoCivil',
+                'batismo','Igreja','funcao','rua','numero','bairro','cidade','estado','cep','celular'];
+  var valido = true;
+  campos.forEach(function(k){
+    var el  = document.getElementById('mbf-'+k);
+    var err = document.getElementById('mbfe-'+k);
+    var vl  = el ? el.value.trim() : '';
+    if (!vl) {
+      valido = false;
+      if (el && el.closest) el.closest('.field').classList.add('has-error');
+      if (err) err.style.display = 'block';
+    } else {
+      if (el && el.closest) el.closest('.field').classList.remove('has-error');
+      if (err) err.style.display = 'none';
+    }
+  });
+  if (!valido) { showToast('Preencha todos os campos obrigatórios.','warning'); return; }
+
+  var btn = document.querySelector('button[onclick="mbSalvarForm()"]');
+  if (btn) btn.classList.add('loading');
+
+  var mAtual = MB.editId
+    ? (MB.membros.filter(function(x){ return String(x.id)===String(MB.editId); })[0] || {})
+    : {};
+
+  var ativoEl = document.getElementById('mbf-ativo');
+  var ativo   = MB.editId ? (ativoEl ? ativoEl.value !== 'false' : mAtual.ativo !== false) : true;
+
+  var membro = {
+    id:          MB.editId || '',
+    rol:         (document.getElementById('mbf-rol').value || '').trim(),
+    nome:        document.getElementById('mbf-nome').value.trim(),
+    sexo:        document.getElementById('mbf-sexo').value,
+    nascimento:  document.getElementById('mbf-nascimento').value.trim(),
+    nomeMae:     document.getElementById('mbf-nomeMae').value.trim(),
+    nomePai:     document.getElementById('mbf-nomePai').value.trim(),
+    estadoCivil: document.getElementById('mbf-estadoCivil').value,
+    batismo:     document.getElementById('mbf-batismo').value.trim(),
+    Igreja:      document.getElementById('mbf-Igreja').value.trim(),
+    funcao:      document.getElementById('mbf-funcao').value.trim(),
+    rua:         document.getElementById('mbf-rua').value.trim(),
+    numero:      document.getElementById('mbf-numero').value.trim(),
+    bairro:      document.getElementById('mbf-bairro').value.trim(),
+    cidade:      document.getElementById('mbf-cidade').value.trim(),
+    estado:      document.getElementById('mbf-estado').value,
+    cep:         document.getElementById('mbf-cep').value.trim(),
+    celular:     document.getElementById('mbf-celular').value.trim(),
+    email:       document.getElementById('mbf-email').value.trim(),
+    rg:          document.getElementById('mbf-rg').value.trim(),
+    cpf:         document.getElementById('mbf-cpf').value.trim(),
+    foto:        MB.fotoData,
+    fotoZoom:    MB.fotoZoom,
+    fotoX:       MB.fotoX,
+    fotoY:       MB.fotoY,
+    ativo:       ativo
+  };
+
+  var token = App.session && App.session.token;
+  google.script.run
+    .withFailureHandler(function(e){
+      if (btn) btn.classList.remove('loading');
+      showToast((e && e.message) || 'Erro ao salvar.', 'error');
+    })
+    .withSuccessHandler(function(r){
+      if (btn) btn.classList.remove('loading');
+      if (!_mbHandleResponse(r, 'salvarMembro')) return;
+      showToast(MB.editId ? 'Membro atualizado!' : 'Membro cadastrado!', 'success');
+      MB.editId = null; MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+      MB.tab = 'lista';
+      document.querySelectorAll('.mb-tab').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('lista')");
+      });
+      _mbLoad(function(){ _mbRenderPanel(); });
+    })
+    .mb_salvarMembro(token, membro);
+}
+
+// ════════════════════════════════════════════
+//  ABA: DETALHE
+// ════════════════════════════════════════════
+function _mbBuildDetalhe() {
+  var m = MB.selected; if (!m) return '';
+  var ativo = m.ativo !== false;
+  var idade = _mbIdade(m.nascimento);
+  var campos = [
+    ['Sexo',           m.sexo],
+    ['Nascimento',     m.nascimento + (idade != null ? ' (' + idade + ' anos)' : '')],
+    ['Mãe',            m.nomeMae],
+    ['Pai',            m.nomePai],
+    ['Estado Civil',   m.estadoCivil],
+    ['Batismo',        m.batismo],
+    ['Igreja Batismo', m.Igreja],
+    ['Função',         m.funcao],
+    ['Celular',        m.celular],
+    ['E-mail',         m.email || '—'],
+    ['RG',             m.rg || '—'],
+    ['CPF',            m.cpf || '—'],
+    ['Endereço',       (m.rua||'') + ', ' + (m.numero||'')],
+    ['Bairro',         m.bairro],
+    ['Cidade/UF',      (m.cidade||'') + '/' + (m.estado||'')],
+    ['CEP',            m.cep]
+  ];
+
+  return (
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'+
+      '<button class="btn btn-ghost btn-sm" onclick="MB.tab=\'lista\';_mbLoad(function(){_mbRenderPanel();})">'+
+        '<i data-lucide="arrow-left" style="width:16px;height:16px"></i>'+
+      '</button>'+
+      '<div>'+
+        '<div class="ed-section-title">'+_mbEsc(m.nome)+'</div>'+
+        '<div class="ed-section-sub">ROL Nº '+_mbEsc(m.rol||'—')+' · '+_mbEsc(m.funcao||'Membro')+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    '<div style="background:var(--glass-bg-premium);border:var(--glass-border-premium);border-radius:18px;padding:20px;backdrop-filter:blur(20px)">'+
+
+      /* Header */
+      '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">'+
+        '<div style="width:68px;height:90px;border-radius:8px;overflow:hidden;border:2px solid var(--border);flex-shrink:0;background:var(--bg4)">'+
+          (m.foto
+            ? '<img src="'+_mbEsc(m.foto)+'" style="width:100%;height:100%;object-fit:cover;transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">'
+            : '<div class="mb-foto-placeholder" style="height:100%">👤</div>')+
+        '</div>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px">'+_mbEsc(m.nome)+'</div>'+
+          '<span class="badge '+(ativo?'badge-green':'badge-red')+'" style="display:inline-flex;margin-bottom:10px">'+(ativo?'Ativo':'Inativo')+'</span>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+            '<button class="btn btn-secondary btn-sm" onclick="mbEditarMembro(\''+_mbEsc(m.id)+'\')">'+
+              '<i data-lucide="pencil" style="width:14px;height:14px"></i> Editar'+
+            '</button>'+
+            '<button class="btn btn-danger btn-sm" onclick="mbConfirmarDeletar(\''+_mbEsc(m.id)+'\')">'+
+              '<i data-lucide="trash-2" style="width:14px;height:14px"></i>'+
+            '</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+      /* Campos */
+      '<div class="mb-detail-grid">'+
+        campos.map(function(c){
+          return '<div>'+
+            '<div class="mb-detail-label">'+_mbEsc(c[0])+'</div>'+
+            '<div class="mb-detail-value">'+_mbEsc(c[1]||'—')+'</div>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+    '</div>'
+  );
+}
+
+// ════════════════════════════════════════════
+//  DELETAR
+// ════════════════════════════════════════════
+function _mbModalConfirmHtml() {
+  return (
+    '<div class="modal-overlay" id="modal-mb-confirm">'+
+      '<div class="modal-box">'+
+        '<div style="text-align:center;font-size:36px;margin-bottom:12px">⚠️</div>'+
+        '<div id="mb-confirm-title" style="font-size:16px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px"></div>'+
+        '<div id="mb-confirm-body"  style="font-size:13px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:20px"></div>'+
+        '<div style="display:flex;gap:10px">'+
+          '<button class="btn btn-secondary btn-full" id="mb-confirm-cancel">Cancelar</button>'+
+          '<button class="btn btn-danger btn-full"    id="mb-confirm-ok">Excluir</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'
+  );
+}
+
+function mbConfirmarDeletar(id) {
+  var m = MB.membros.filter(function(x){ return String(x.id)===String(id); })[0];
+  if (!m) return;
+  var overlay = document.getElementById('modal-mb-confirm');
+  document.getElementById('mb-confirm-title').textContent = 'Excluir membro';
+  document.getElementById('mb-confirm-body').textContent  = 'Excluir "'+m.nome+'"? Esta ação não pode ser desfeita.';
+  document.getElementById('mb-confirm-cancel').onclick = function(){ overlay.classList.remove('open'); };
+  document.getElementById('mb-confirm-ok').onclick = function(){
+    overlay.classList.remove('open');
+    _mbDeletar(id);
+  };
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.classList.remove('open'); };
+  overlay.classList.add('open');
+}
+
+function _mbDeletar(id) {
+  var token = App.session && App.session.token;
+  google.script.run
+    .withFailureHandler(function(e){ showToast((e&&e.message)||'Erro ao excluir.','error'); })
+    .withSuccessHandler(function(r){
+      if (!_mbHandleResponse(r,'deletarMembro')) return;
+      showToast('Membro excluído.','success');
+      MB.tab = 'lista'; MB.selected = null;
+      _mbLoad(function(){ _mbRenderPanel(); });
+    })
+    .mb_deletarMembro(token, id);
+}
+
+// ════════════════════════════════════════════
+//  TOPNAV MOBILE — gear menu
+// ════════════════════════════════════════════
+function mbToggleNavCfg(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('mb-nav-cfg-dd'); if (!dd) return;
+  var opening = !dd.classList.contains('open');
+  dd.classList.toggle('open');
+  if (opening) {
+    if (window.lucide) lucide.createIcons();
+    setTimeout(function(){
+      document.addEventListener('click', function _close(ev){
+        if (!dd.contains(ev.target)){ dd.classList.remove('open'); document.removeEventListener('click',_close); }
+      });
+    }, 0);
+  }
+}
+
+// ════════════════════════════════════════════
+//  EXPORTAR / IMPORTAR JSON (backup)
+// ════════════════════════════════════════════
+function mbExportarJSON() {
+  if (!MB.membros.length) { showToast('Nenhum membro para exportar.','warning'); return; }
+  var json = JSON.stringify(MB.membros, null, 2);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  a.download = 'Backup_Membros_' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast('Backup exportado!','success');
+}
+
+function mbImportarJSON(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) { showToast('Arquivo inválido — precisa ser um array JSON.','error'); return; }
+      var token = App.session && App.session.token;
+      var ok = 0, erros = 0, total = data.length;
+
+      function next(i) {
+        if (i >= total) {
+          showToast('Importação concluída: '+ok+' salvo(s)'+(erros?' · '+erros+' erro(s)':''),'success');
+          _mbLoad(function(){ _mbRenderPanel(); });
+          return;
+        }
+        var m = data[i];
+        // Normaliza campos (backup antigo pode ter camelCase ou PascalCase)
+        var norm = {
+          id:          m.id || m.ID || '',
+          rol:         m.rol || m.Rol || '',
+          nome:        m.nome || m.Nome || '',
+          sexo:        m.sexo || m.Sexo || '',
+          nascimento:  m.nascimento || m.Nascimento || '',
+          nomeMae:     m.nomeMae || m.NomeMae || '',
+          nomePai:     m.nomePai || m.NomePai || '',
+          estadoCivil: m.estadoCivil || m.EstadoCivil || '',
+          batismo:     m.batismo || m.Batismo || '',
+          Igreja:      m.Igreja || m.igreja || m.IgrejaOrigen || '',
+          funcao:      m.funcao || m.Funcao || '',
+          rua:         m.rua || m.Rua || '',
+          numero:      m.numero || m.Numero || '',
+          bairro:      m.bairro || m.Bairro || '',
+          cidade:      m.cidade || m.Cidade || '',
+          estado:      m.estado || m.Estado || '',
+          cep:         m.cep || m.CEP || '',
+          celular:     m.celular || m.Celular || '',
+          email:       m.email || m.Email || '',
+          rg:          m.rg || m.RG || '',
+          cpf:         m.cpf || m.CPF || '',
+          foto:        m.foto || m.Foto || '',
+          fotoZoom:    parseFloat(m.fotoZoom || m.FotoZoom || 1) || 1,
+          fotoX:       parseFloat(m.fotoX    || m.FotoX    || 50) || 50,
+          fotoY:       parseFloat(m.fotoY    || m.FotoY    || 50) || 50,
+          ativo:       (m.ativo !== false && m.ativo !== 'FALSE' && m.Ativo !== false)
+        };
+        if (!norm.nome) { erros++; next(i+1); return; }
+        google.script.run
+          .withFailureHandler(function(){ erros++; next(i+1); })
+          .withSuccessHandler(function(r){
+            if (r && r.success) ok++; else erros++;
+            next(i+1);
+          })
+          .mb_salvarMembro(token, norm);
+      }
+      showToast('Importando '+total+' registros...','info');
+      next(0);
+    } catch(err) {
+      showToast('Erro ao ler arquivo JSON.','error');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     FASE 2 — CARTEIRINHA DE MEMBRO
+     Geração de cartão frente+verso (85.6×53.98mm)
+     PDF individual, PDF em lote (4/página A4), PNG
+     Conversão do MemberCard React→HTML+CSS puro (ES5)
+══════════════════════════════════════════════════════════ -->
+<style>
+/* ── Container oculto de renderização para pdf ── */
+#mb-pdf-render-container {
+  position: fixed;
+  top: -9999px; left: -9999px;
+  width: 340px; height: 214px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── Card 340×214px (preview) / 85.6×53.98mm (print/pdf) ── */
+.mb-card {
+  width: 340px; height: 214px;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  -webkit-font-smoothing: antialiased;
+  isolation: isolate;
+  flex-shrink: 0;
+}
+.mb-card.for-print {
+  width: 85.6mm; height: 53.98mm;
+  border-radius: 14px;
+}
+
+/* ── FRENTE ── */
+.mb-card-front {
+  background: linear-gradient(135deg, #001040 0%, #1a2850 100%);
+  color: #fff;
+  width: 100%; height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.mb-card-front .card-watermark {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 65%; height: 65%;
+  opacity: 0.15; z-index: 0;
+  pointer-events: none;
+}
+.mb-card-front .card-watermark img { width: 100%; height: 100%; object-fit: contain; }
+.mb-card-front .card-wave {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 35%;
+  z-index: 0; pointer-events: none;
+}
+.mb-card-front .card-body {
+  position: relative; z-index: 1;
+  padding: 16px 20px;
+  height: 100%;
+  box-sizing: border-box;
+}
+.mb-card-front .card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.mb-card-front .card-logo {
+  width: 38px; height: 38px; flex-shrink: 0;
+}
+.mb-card-front .card-logo img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(1); }
+.mb-card-front .card-church-name { display: flex; flex-direction: column; }
+.mb-card-front .card-church-name .line1 { font-size: 10px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.2; }
+.mb-card-front .card-church-name .line2 { font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+
+.mb-card-front .card-member-row {
+  display: flex; gap: 14px; align-items: flex-start;
+  margin-bottom: 10px;
+}
+.mb-card-front .card-photo {
+  width: 68px; height: 90px;
+  border-radius: 7px; overflow: hidden;
+  background: #d9e0f0;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.mb-card-front .card-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.mb-card-front .card-photo .no-photo { font-size: 28px; color: #6b7280; }
+.mb-card-front .card-member-info { flex: 1; padding-top: 2px; }
+.mb-card-front .card-member-info .m-nome {
+  font-size: 12px; font-weight: 800;
+  margin-bottom: 6px; line-height: 1.1;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.mb-card-front .card-member-info .m-rol {
+  font-size: 10.5px; opacity: 0.85; font-weight: 600;
+  margin-bottom: 5px; letter-spacing: 0.5px;
+}
+.mb-card-front .card-member-info .m-funcao {
+  font-size: 10px; opacity: 0.75; font-weight: 600;
+}
+.mb-card-front .card-footer {
+  position: absolute;
+  bottom: 8px; left: 20px; right: 20px;
+  background: rgba(255,255,255,0.97);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #001040;
+  z-index: 2;
+  text-align: center;
+}
+.mb-card-front .card-footer .f1 { font-size: 7px; font-weight: 700; margin-bottom: 1.5px; }
+.mb-card-front .card-footer .f2 { font-size: 6.5px; font-weight: 500; line-height: 1.3; }
+.mb-card-front .card-footer .f3 { font-size: 6.5px; font-weight: 600; margin-top: 1px; }
+
+/* ── VERSO ── */
+.mb-card-back {
+  background: linear-gradient(135deg, #001040 0%, #1a2850 100%);
+  color: #fff;
+  width: 100%; height: 100%;
+  position: relative;
+}
+.mb-card-back .card-watermark {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%; height: 60%;
+  opacity: 0.12; z-index: 0;
+  pointer-events: none;
+}
+.mb-card-back .card-watermark img { width: 100%; height: 100%; object-fit: contain; }
+.mb-card-back .card-body {
+  position: relative; z-index: 1;
+  padding: 12px 20px;
+  height: 100%; box-sizing: border-box;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+}
+.mb-card-back .back-title {
+  font-size: 10px; font-weight: 800;
+  text-align: center;
+  text-transform: uppercase; letter-spacing: 1px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 4px; margin-bottom: 10px;
+}
+.mb-card-back .back-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+}
+.mb-card-back .back-field {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 2px;
+}
+.mb-card-back .back-field .bf-label {
+  font-size: 7px; opacity: 0.7; font-weight: 600;
+  text-transform: uppercase;
+}
+.mb-card-back .back-field .bf-val {
+  font-size: 9px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mb-card-back .back-sign {
+  text-align: center;
+  display: flex; flex-direction: column;
+  align-items: center; margin-top: -4px;
+}
+.mb-card-back .back-sign .sign-img-wrap {
+  width: 120px; height: 30px; margin-bottom: 2px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mb-card-back .back-sign .sign-img-wrap img {
+  width: 170%; height: 100%; object-fit: contain;
+  filter: brightness(0) invert(1); margin-top: 10px;
+}
+.mb-card-back .back-sign .sign-line {
+  width: 70%; border-bottom: 1px solid #fff; margin-bottom: 20px;
+}
+.mb-card-back .back-sign .sign-name {
+  margin-top: -16px; font-size: 8px; font-weight: 700;
+  text-transform: uppercase;
+}
+.mb-card-back .back-sign .sign-cargo { margin-bottom: 2px; font-size: 7px; font-weight: 500; opacity: 0.8; }
+.mb-card-back .back-address {
+  padding-top: 3px;
+  border-top: 1px solid rgba(217,224,240,0.2);
+  font-size: 7.5px; text-align: center;
+  margin-top: 2px; line-height: 1.2; opacity: 0.9;
+}
+.mb-card-back .back-address .ba1 { font-weight: 700; }
+.mb-card-back .back-address .ba2 { font-weight: 500; }
+.mb-card-back .back-address .ba3 { font-weight: 600; }
+
+/* ── Preview grid na UI ── */
+.mb-card-preview-wrap {
+  display: flex; gap: 20px; align-items: flex-start;
+  justify-content: center; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.mb-card-preview-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-muted);
+  text-align: center; margin-bottom: 6px;
+}
+.mb-card-shadow { box-shadow: 0 8px 32px rgba(0,16,64,0.35); border-radius: 14px; }
+
+/* ── Lote grid ── */
+.mb-lote-grid {
+  display: grid; grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 520px) {
+  .mb-lote-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.mb-lote-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 12px;
+  background: var(--glass-bg-premium); border: var(--glass-border-premium);
+  cursor: pointer; transition: border-color .15s;
+}
+.mb-lote-item:hover { border-color: var(--teal-border); }
+.mb-lote-item.selected { border-color: var(--teal); background: var(--teal-dim); }
+.mb-lote-check {
+  width: 20px; height: 20px; border-radius: 6px;
+  border: 2px solid var(--border); background: var(--bg4);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+  font-size: 11px; color: transparent;
+}
+.mb-lote-item.selected .mb-lote-check {
+  background: var(--teal); border-color: var(--teal); color: #fff;
+}
+
+/* ── Toast de progresso PDF ── */
+#mb-pdf-toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  z-index: 9999; min-width: 260px;
+  text-align: center; display: none;
+}
+#mb-pdf-toast .pt-label { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+#mb-pdf-toast .pt-bar-wrap { background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+#mb-pdf-toast .pt-bar { height: 100%; background: var(--teal); border-radius: 4px; transition: width .3s; }
+#mb-pdf-toast .pt-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+</style>
+
+<!-- Container oculto de renderização para capturas PDF -->
+<div id="mb-pdf-render-container"></div>
+
+<!-- Toast de progresso PDF -->
+<div id="mb-pdf-toast">
+  <div class="pt-label" id="mb-pdf-toast-label">Gerando PDF...</div>
+  <div class="pt-bar-wrap"><div class="pt-bar" id="mb-pdf-toast-bar" style="width:0%"></div></div>
+  <div class="pt-sub"   id="mb-pdf-toast-sub"></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   CARTEIRINHA — ES5 puro, sem React
+   Funções com prefixo mbCard_ para não colidir
+══════════════════════════════════════════════════════════ */
+
+// ── Constantes visuais (idênticas ao Index3.html) ────────
+var MB_CARD = {
+  LOGO:      'data:image/png;base64,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',
+  WATERMARK: 'https://i.imgur.com/PVBVFQF.png',
+  ASSINATURA:'https://i.imgur.com/wF4mKRr.png',
+  PASTOR:    'Sebastião Marcos Soares da Costa',
+  CARGO:     'Pr Presidente',
+  IGREJA:    'Assembleia de Deus Fonte da Salvação',
+  ENDERECO:  'Rua Manoel Avelar, 497 - São Marcos, Betim/MG',
+  CNPJ:      '49.482.621/0001-48'
+};
+
+// ── Monta HTML da FRENTE do cartão ──────────────────────
+function mbCard_htmlFrente(m, forPrint) {
+  var foto = m.foto
+    ? '<img src="'+m.foto+'" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%;transform:scale('+(m.fotoZoom||1)+')">'
+    : '<div class="no-photo">👤</div>';
+
+  return (
+    '<div class="mb-card'+(forPrint?' for-print':'')+' mb-card-shadow">'+
+    '<div class="mb-card-front">'+
+
+      /* Marca d'água */
+      '<div class="card-watermark">'+
+        '<img src="'+MB_CARD.WATERMARK+'" crossorigin="anonymous">'+
+      '</div>'+
+
+      /* Onda branca SVG (path idêntico ao Index3) */
+      '<svg class="card-wave" viewBox="0 0 340 75" preserveAspectRatio="none" fill="none">'+
+        '<path d="M0 25 Q85 8, 170 25 T340 25 L340 75 L0 75 Z" fill="#ffffff"/>'+
+      '</svg>'+
+
+      '<div class="card-body">'+
+
+        /* Header: logo + nome da igreja */
+        '<div class="card-header">'+
+          '<div class="card-logo"><img src="'+MB_CARD.LOGO+'" crossorigin="anonymous"></div>'+
+          '<div class="card-church-name">'+
+            '<div class="line1">Igreja Assembleia de Deus</div>'+
+            '<div class="line2">Fonte da Salvação</div>'+
+          '</div>'+
+        '</div>'+
+
+        /* Foto + dados do membro */
+        '<div class="card-member-row">'+
+          '<div class="card-photo">'+foto+'</div>'+
+          '<div class="card-member-info">'+
+            '<div class="m-nome">'+(m.nome||'Nome do Membro')+'</div>'+
+            '<div class="m-rol">ROL Nº '+(m.rol||'0000')+'</div>'+
+            '<div class="m-funcao">'+(m.funcao||'Membro')+'</div>'+
+          '</div>'+
+        '</div>'+
+
+        /* Rodapé branco */
+        '<div class="card-footer">'+
+          '<div class="f1">'+MB_CARD.IGREJA+'</div>'+
+          '<div class="f2">Sede - '+MB_CARD.ENDERECO+'</div>'+
+          '<div class="f3">CNPJ: '+MB_CARD.CNPJ+'</div>'+
+        '</div>'+
+
+      '</div>'+/* card-body */
+    '</div>'+/* mb-card-front */
+    '</div>' /* mb-card */
+  );
+}
+
+// ── Monta HTML do VERSO do cartão ───────────────────────
+function mbCard_htmlVerso(m, forPrint) {
+  var campos = [
+    ['Nascimento', m.nascimento],
+    ['Estado Civil', m.estadoCivil],
+    ['RG', m.rg],
+    ['CPF', m.cpf],
+    ['Batismo', m.batismo],
+    ['Cidade/UF', (m.cidade||'')+'/'+(m.estado||'')]
+  ];
+
+  var grid = campos.map(function(c){
+    return '<div class="back-field">'+
+      '<div class="bf-label">'+c[0]+'</div>'+
+      '<div class="bf-val">'+(c[1]||'—')+'</div>'+
+    '</div>';
+  }).join('');
+
+  return (
+    '<div class="mb-card'+(forPrint?' for-print':'')+' mb-card-shadow">'+
+    '<div class="mb-card-back">'+
+
+      '<div class="card-watermark">'+
+        '<img src="'+MB_CARD.WATERMARK+'" crossorigin="anonymous">'+
+      '</div>'+
+
+      '<div class="card-body">'+
+
+        '<div>'+
+          '<div class="back-title">Dados do Membro</div>'+
+          '<div class="back-grid">'+grid+'</div>'+
+        '</div>'+
+
+        /* Assinatura */
+        '<div class="back-sign">'+
+          '<div class="sign-img-wrap">'+
+            '<img src="'+MB_CARD.ASSINATURA+'" crossorigin="anonymous">'+
+          '</div>'+
+          '<div class="sign-line"></div>'+
+          '<div class="sign-name">'+MB_CARD.PASTOR+'</div>'+
+          '<div class="sign-cargo">'+MB_CARD.CARGO+'</div>'+
+        '</div>'+
+
+        /* Endereço rodapé */
+        '<div class="back-address">'+
+          '<div class="ba1">'+MB_CARD.IGREJA+'</div>'+
+          '<div class="ba2">'+MB_CARD.ENDERECO+'</div>'+
+          '<div class="ba3">CNPJ: '+MB_CARD.CNPJ+'</div>'+
+        '</div>'+
+
+      '</div>'+
+    '</div>'+
+    '</div>'
+  );
+}
+
+// ── Tab: CARTEIRINHA — lista + preview + botões ──────────
+function _mbBuildCarteirinha() {
+  var ativos = MB.membros.filter(function(m){ return m.ativo !== false; });
+
+  if (!ativos.length) {
+    return '<div class="mb-empty">'+
+      '<span class="mb-empty-icon">🪪</span>'+
+      '<div class="mb-empty-title">Nenhum membro ativo</div>'+
+      '<div class="mb-empty-sub">Cadastre membros para gerar carteirinhas.</div>'+
+    '</div>';
+  }
+
+  /* Preview do primeiro membro selecionado */
+  var selected = MB.cardSelected
+    ? (MB.membros.filter(function(m){ return String(m.id)===String(MB.cardSelected); })[0] || ativos[0])
+    : ativos[0];
+
+  MB.cardSelected = selected.id;
+
+  var preview =
+    '<div style="margin-bottom:20px">'+
+      '<div class="ed-section-title" style="margin-bottom:14px">🪪 Preview</div>'+
+      '<div class="mb-card-preview-wrap">'+
+        '<div>'+
+          '<div class="mb-card-preview-label">Frente</div>'+
+          mbCard_htmlFrente(selected, false)+
+        '</div>'+
+        '<div>'+
+          '<div class="mb-card-preview-label">Verso</div>'+
+          mbCard_htmlVerso(selected, false)+
+        '</div>'+
+      '</div>'+
+      /* Ações do membro selecionado */
+      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">'+
+        '<button class="btn btn-primary btn-sm" onclick="mbCard_downloadPDF(\''+selected.id+'\')">'+
+          '<i data-lucide="file-down" style="width:15px;height:15px"></i> PDF Carteirinha'+
+        '</button>'+
+        '<button class="btn btn-secondary btn-sm" onclick="mbCard_downloadPNG(\''+selected.id+'\',false)">'+
+          '<i data-lucide="image" style="width:15px;height:15px"></i> PNG Frente'+
+        '</button>'+
+        '<button class="btn btn-secondary btn-sm" onclick="mbCard_downloadPNG(\''+selected.id+'\',true)">'+
+          '<i data-lucide="image" style="width:15px;height:15px"></i> PNG Verso'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+
+  /* Lista para seleção individual / lote */
+  var listaHtml =
+    '<div style="background:var(--glass-bg-premium);border:var(--glass-border-premium);border-radius:18px;padding:16px;backdrop-filter:blur(14px)">'+
+      '<div class="ed-section-header" style="margin-bottom:10px">'+
+        '<div>'+
+          '<div class="ed-section-title">Membros Ativos</div>'+
+          '<div class="ed-section-sub">'+ativos.length+' membro(s) · Clique para preview · Marque para lote</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+          '<button class="btn btn-ghost btn-sm" onclick="mbCard_selecionarTodos()">'+
+            '<i data-lucide="check-square" style="width:14px;height:14px"></i> Todos'+
+          '</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="mbCard_deselecionarTodos()">'+
+            '<i data-lucide="square" style="width:14px;height:14px"></i> Nenhum'+
+          '</button>'+
+          '<button class="btn btn-primary btn-sm" id="btn-lote" onclick="mbCard_gerarLote()">'+
+            '<i data-lucide="layers" style="width:14px;height:14px"></i>'+
+            '<span id="btn-lote-txt"> Gerar PDF Lote</span>'+
+            '<div class="btn-spinner"></div>'+
+          '</button>'+
+        '</div>'+
+      '</div>'+
+
+      /* Busca */
+      '<div class="ed-search-wrap" style="margin-bottom:10px">'+
+        '<span class="ed-search-icon"><i data-lucide="search" style="width:15px;height:15px"></i></span>'+
+        '<input class="ed-search" type="text" placeholder="Buscar membro..." value="'+_mbEsc(MB.cardSearch||'')+'" oninput="MB.cardSearch=this.value;_mbRenderPanel()">'+
+      '</div>'+
+
+      '<div class="mb-lote-grid" id="mb-lote-grid">';
+
+  MB.cardSelecionados = MB.cardSelecionados || {};
+
+  var filtrados = ativos.filter(function(m){
+    var q = (MB.cardSearch||'').toLowerCase();
+    return !q || (m.nome||'').toLowerCase().indexOf(q)!==-1 || (m.rol||'').indexOf(q)!==-1;
+  });
+
+  filtrados.forEach(function(m){
+    var sel = !!MB.cardSelecionados[m.id];
+    var isSelected = String(m.id) === String(MB.cardSelected);
+    listaHtml +=
+      '<div class="mb-lote-item'+(sel?' selected':'')+'" id="lote-item-'+m.id+'">'+
+        '<div class="mb-lote-check" onclick="event.stopPropagation();mbCard_toggleSel(\''+m.id+'\')">'+
+          (sel?'✓':'')+
+        '</div>'+
+        '<div class="ed-list-avatar" onclick="mbCard_selecionarPreview(\''+m.id+'\')" style="cursor:pointer">'+
+          (m.foto?'<img src="'+m.foto+'" style="width:100%;height:100%;object-fit:cover">':((m.nome||'?')[0].toUpperCase()))+
+        '</div>'+
+        '<div style="flex:1;min-width:0;cursor:pointer" onclick="mbCard_selecionarPreview(\''+m.id+'\')">'+
+          '<div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(m.nome||'—')+'</div>'+
+          '<div style="font-size:10px;color:var(--text-muted)">ROL '+m.rol+' · '+(m.funcao||'Membro')+'</div>'+
+        '</div>'+
+        '<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="mbCard_downloadPDF(\''+m.id+'\')">'+
+          '<i data-lucide="file-down" style="width:13px;height:13px"></i>'+
+        '</button>'+
+      '</div>';
+  });
+
+  listaHtml += '</div></div>';
+
+  return preview + listaHtml;
+}
+
+// ── Selecionar membro para preview ──────────────────────
+function mbCard_selecionarPreview(id) {
+  MB.cardSelected = id;
+  _mbRenderPanel();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Seleção para lote ────────────────────────────────────
+function mbCard_toggleSel(id) {
+  MB.cardSelecionados = MB.cardSelecionados || {};
+  if (MB.cardSelecionados[id]) delete MB.cardSelecionados[id];
+  else MB.cardSelecionados[id] = true;
+  _mbRenderPanel();
+}
+function mbCard_selecionarTodos() {
+  MB.cardSelecionados = {};
+  MB.membros.filter(function(m){ return m.ativo !== false; })
+    .forEach(function(m){ MB.cardSelecionados[m.id] = true; });
+  _mbRenderPanel();
+}
+function mbCard_deselecionarTodos() {
+  MB.cardSelecionados = {};
+  _mbRenderPanel();
+}
+
+// ── Toast de progresso ───────────────────────────────────
+function mbCard_toast(label, pct, sub) {
+  var t = document.getElementById('mb-pdf-toast');
+  var l = document.getElementById('mb-pdf-toast-label');
+  var b = document.getElementById('mb-pdf-toast-bar');
+  var s = document.getElementById('mb-pdf-toast-sub');
+  if (!t) return;
+  if (label === null) { t.style.display = 'none'; return; }
+  t.style.display = 'block';
+  if (l) l.textContent = label;
+  if (b) b.style.width = pct + '%';
+  if (s) s.textContent = sub || '';
+}
+
+// ── Renderiza cartão num div temporário e captura PNG ────
+function mbCard_capturar(m, showBack) {
+  return new Promise(function(resolve, reject) {
+    var container = document.getElementById('mb-pdf-render-container');
+    var wrapper   = document.createElement('div');
+    wrapper.style.cssText = 'width:340px;height:214px;position:absolute;top:0;left:0;overflow:hidden;border-radius:14px;background:#fff;font-family:Inter,sans-serif';
+    wrapper.innerHTML = showBack ? mbCard_htmlVerso(m, false) : mbCard_htmlFrente(m, false);
+    container.appendChild(wrapper);
+
+    /* Aguarda imagens carregarem */
+    var imgs = wrapper.querySelectorAll('img');
+    var pending = imgs.length;
+
+    function proceed() {
+      setTimeout(function() {
+        domtoimage.toPng(wrapper, {
+          width: 340 * 4, height: 214 * 4,
+          bgcolor: '#ffffff',
+          style: {
+            transform: 'scale(4)',
+            transformOrigin: 'top left',
+            borderRadius: '14px'
+          }
+        }).then(function(dataUrl) {
+          container.removeChild(wrapper);
+          resolve(dataUrl);
+        }).catch(function(err) {
+          container.removeChild(wrapper);
+          reject(err);
+        });
+      }, 800);
+    }
+
+    if (pending === 0) { proceed(); return; }
+    imgs.forEach(function(img) {
+      if (img.complete) { pending--; if (pending === 0) proceed(); }
+      else {
+        img.onload  = function() { pending--; if (pending === 0) proceed(); };
+        img.onerror = function() { pending--; if (pending === 0) proceed(); };
+      }
+    });
+  });
+}
+
+// ── Download PDF individual (frente + verso) ─────────────
+function mbCard_downloadPDF(id) {
+  var m = MB.membros.filter(function(x){ return String(x.id)===String(id); })[0];
+  if (!m) return;
+
+  if (!window.jspdf || !window.domtoimage) {
+    showToast('Bibliotecas PDF não carregadas ainda. Aguarde.', 'warning');
+    return;
+  }
+
+  mbCard_toast('Gerando PDF...', 10, 'Capturando frente...');
+
+  mbCard_capturar(m, false).then(function(frontImg) {
+    mbCard_toast('Gerando PDF...', 50, 'Capturando verso...');
+    return mbCard_capturar(m, true).then(function(backImg) {
+      mbCard_toast('Gerando PDF...', 85, 'Salvando arquivo...');
+      var pdf = new window.jspdf.jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [85.6, 53.98]
+      });
+      pdf.addImage(frontImg, 'PNG', 0, 0, 85.6, 53.98, undefined, 'SLOW');
+      pdf.addPage([85.6, 53.98], 'landscape');
+      pdf.addImage(backImg,  'PNG', 0, 0, 85.6, 53.98, undefined, 'SLOW');
+      pdf.save('Cartao_ROL' + (m.rol||'0000') + '_' + (m.nome||'Membro').split(' ')[0] + '.pdf');
+      mbCard_toast(null);
+      showToast('PDF gerado com sucesso!', 'success');
+    });
+  }).catch(function(e) {
+    mbCard_toast(null);
+    console.error(e);
+    showToast('Erro ao gerar PDF. Verifique o console.', 'error');
+  });
+}
+
+// ── Download PNG (frente ou verso) ───────────────────────
+function mbCard_downloadPNG(id, showBack) {
+  var m = MB.membros.filter(function(x){ return String(x.id)===String(id); })[0];
+  if (!m) return;
+
+  if (!window.domtoimage) {
+    showToast('Biblioteca de imagem não carregada ainda.', 'warning');
+    return;
+  }
+
+  mbCard_toast('Gerando PNG...', 30, showBack ? 'Verso' : 'Frente');
+
+  mbCard_capturar(m, showBack).then(function(dataUrl) {
+    var a = document.createElement('a');
+    a.href     = dataUrl;
+    a.download = 'Cartao_' + (showBack?'Verso':'Frente') + '_ROL' + (m.rol||'0000') + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    mbCard_toast(null);
+    showToast('PNG salvo!', 'success');
+  }).catch(function(e) {
+    mbCard_toast(null);
+    console.error(e);
+    showToast('Erro ao gerar PNG.', 'error');
+  });
+}
+
+// ── Gerar PDF em lote (4 por página A4, frente|verso lado a lado) ──
+function mbCard_gerarLote() {
+  MB.cardSelecionados = MB.cardSelecionados || {};
+  var ids = Object.keys(MB.cardSelecionados);
+  if (!ids.length) { showToast('Selecione pelo menos um membro.', 'warning'); return; }
+
+  if (!window.jspdf || !window.domtoimage) {
+    showToast('Bibliotecas PDF não carregadas ainda.', 'warning');
+    return;
+  }
+
+  var lista = ids.map(function(id){
+    return MB.membros.filter(function(m){ return String(m.id)===String(id); })[0];
+  }).filter(Boolean);
+
+  var btn = document.getElementById('btn-lote');
+  if (btn) btn.classList.add('loading');
+
+  var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  var CW = 85.6, CH = 53.98, MARGIN = 10, GAP = 4;
+
+  var total = lista.length;
+  var done  = 0;
+
+  function processarMembro(idx) {
+    if (idx >= lista.length) {
+      // Todas as páginas geradas
+      pdf.save('Lote_Membros_' + new Date().toISOString().split('T')[0] + '.pdf');
+      if (btn) btn.classList.remove('loading');
+      mbCard_toast(null);
+      showToast('PDF lote gerado! ' + total + ' membro(s).', 'success');
+      return;
+    }
+
+    var m     = lista[idx];
+    var posNaPagina = idx % 4;
+
+    // Nova página a cada 4 membros (exceto a primeira)
+    if (posNaPagina === 0 && idx > 0) pdf.addPage();
+
+    var yPos = MARGIN + posNaPagina * (CH + GAP);
+    var pct  = Math.round((idx / total) * 90) + 5;
+
+    mbCard_toast(
+      'Gerando lote (' + (idx+1) + '/' + total + ')',
+      pct,
+      m.nome || ''
+    );
+
+    mbCard_capturar(m, false).then(function(frontImg) {
+      pdf.addImage(frontImg, 'PNG', MARGIN, yPos, CW, CH, undefined, 'SLOW');
+      return mbCard_capturar(m, true);
+    }).then(function(backImg) {
+      pdf.addImage(backImg, 'PNG', MARGIN + CW + GAP, yPos, CW, CH, undefined, 'SLOW');
+      processarMembro(idx + 1);
+    }).catch(function(e) {
+      console.error('Erro no membro ' + m.nome, e);
+      processarMembro(idx + 1); // Continua mesmo com erro
+    });
+  }
+
+  processarMembro(0);
+}
+
+// ── Inicialização do estado de carteirinha ───────────────
+if (!MB.cardSelected)     MB.cardSelected     = null;
+if (!MB.cardSelecionados) MB.cardSelecionados = {};
+if (!MB.cardSearch)       MB.cardSearch       = '';
+</script>

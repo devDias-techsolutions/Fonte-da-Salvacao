@@ -1,0 +1,403 @@
+<style>
+/* ══════════════════════════════════════════════════
+   LOGIN PREMIUM v3 — AD Fonte da Salvação
+══════════════════════════════════════════════════ */
+#view-login { min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+
+/* ── FUNDO MESH ── */
+.login-bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 85% 65% at 50% -8%, rgba(0,196,181,.20) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 90% 95%, rgba(0,150,180,.08) 0%, transparent 55%),
+    var(--bg);
+  pointer-events: none;
+}
+.login-bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,196,181,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,196,181,.028) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 75%);
+}
+/* partículas flutuantes */
+.login-bg-glow {
+  position: fixed; pointer-events: none; z-index: 0;
+}
+.login-bg-glow::before {
+  content: ''; position: absolute;
+  top: 20vh; left: 10vw;
+  width: 300px; height: 300px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,196,181,.07) 0%, transparent 65%);
+  animation: floatGlow 8s ease-in-out infinite;
+}
+.login-bg-glow::after {
+  content: ''; position: absolute;
+  bottom: 15vh; right: 8vw;
+  width: 240px; height: 240px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,180,220,.06) 0%, transparent 65%);
+  animation: floatGlow 11s ease-in-out infinite reverse;
+}
+@keyframes floatGlow {
+  0%,100% { transform: translateY(0) scale(1); opacity: .7; }
+  50%      { transform: translateY(-28px) scale(1.08); opacity: 1; }
+}
+
+/* ── WRAPPER ── */
+.login-wrapper {
+  position: relative; z-index: 1; flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 20px 48px;
+}
+
+/* ── HEADER ── */
+.login-header { text-align: center; margin-bottom: 40px; }
+
+.login-logo-ring {
+  position: relative; width: 92px; height: 92px; margin: 0 auto 22px;
+}
+.login-logo-bg {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #00b8ad, #007d78);
+  border: 2px solid rgba(0,196,181,.55);
+  box-shadow: 0 4px 24px rgba(0,196,181,.30), inset 0 1px 0 rgba(255,255,255,.12);
+  animation: ringPulse 3s ease-in-out infinite;
+}
+@keyframes ringPulse {
+  0%,100% { box-shadow: 0 4px 24px rgba(0,196,181,.30), inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 0 rgba(0,196,181,.35); }
+  50%      { box-shadow: 0 4px 32px rgba(0,196,181,.45), inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 14px transparent; }
+}
+.login-logo-ring::before, .login-logo-ring::after {
+  content: ''; position: absolute; border-radius: 50%;
+  border: 1px solid rgba(0,196,181,.14);
+  animation: orbitRing 12s linear infinite;
+}
+.login-logo-ring::before { inset: -14px; }
+.login-logo-ring::after  { inset: -26px; animation-direction: reverse; animation-duration: 18s; border-color: rgba(0,196,181,.07); }
+@keyframes orbitRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.login-logo-icon {
+  position: relative; z-index: 1;
+  width: 92px; height: 92px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.login-church-name {
+  font-size: clamp(20px,5vw,26px); font-weight: 900;
+  color: var(--text); letter-spacing: -.5px; line-height: 1.15;
+}
+[data-theme="dark"] .login-church-name { color: #fff; }
+.login-church-sub {
+  font-size: 11px; color: var(--text-muted); margin-top: 5px;
+  font-family: 'DM Mono',monospace; letter-spacing: .7px; text-transform: uppercase;
+}
+
+/* ── CARD ── */
+.login-card {
+  width: 100%; max-width: 420px;
+  background: var(--bg-glass2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-xl);
+  padding: 36px 28px;
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(0,196,181,.06);
+  position: relative; overflow: hidden;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+/* Glow accent top */
+.login-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 15%; right: 15%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--teal), transparent);
+}
+/* Ambient inner glow */
+.login-card::after {
+  content: ''; position: absolute;
+  top: -60px; left: 50%; transform: translateX(-50%);
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,196,181,.08) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.login-card-title { font-size: 20px; font-weight: 900; color: var(--text); margin-bottom: 4px; letter-spacing: -.4px; }
+.login-card-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+
+/* senha toggle */
+.pwd-toggle-btn {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--text-dim); padding: 0;
+  display: flex; align-items: center; transition: color .15s;
+}
+.pwd-toggle-btn:hover { color: var(--text-muted); }
+
+/* força da senha */
+.pwd-strength { margin-top: 8px; display: none; }
+.pwd-strength.visible { display: block; }
+.pwd-strength-bar { height: 3px; border-radius: 100px; background: var(--bg4); overflow: hidden; margin-bottom: 5px; }
+.pwd-strength-fill { height: 100%; border-radius: 100px; transition: width .3s var(--ease), background .3s; }
+.pwd-strength-label { font-size: 11px; color: var(--text-dim); font-family: 'DM Mono',monospace; }
+
+/* esqueci senha */
+.forgot-link {
+  background: none; border: none; cursor: pointer; color: var(--teal);
+  font-size: 13px; font-weight: 700; padding: 0; text-decoration: none;
+  font-family: 'Plus Jakarta Sans',sans-serif; transition: color .15s;
+}
+.forgot-link:hover { color: var(--teal-light); text-decoration: underline; }
+.login-forgot-row { display: flex; justify-content: flex-end; margin-top: -8px; margin-bottom: 20px; }
+
+/* erro inline */
+.login-error-msg {
+  background: var(--red-dim); border: 1px solid rgba(255,107,107,.22);
+  border-radius: var(--r-sm); padding: 12px 16px;
+  font-size: 13px; color: var(--red);
+  display: none; align-items: center; gap: 8px; margin-bottom: 16px;
+}
+.login-error-msg.visible { display: flex; }
+
+/* rodapé */
+.login-footer {
+  margin-top: 22px; text-align: center;
+  font-size: 11px; color: var(--text-dim);
+  font-family: 'DM Mono',monospace; letter-spacing: .3px;
+}
+
+/* ── PRIMEIRO ACESSO / RECUPERAR SENHA ── */
+#view-primeiro-acesso, #view-recuperar-senha {
+  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+}
+.pa-wrapper {
+  position: relative; z-index: 1; flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 20px 48px;
+}
+.pa-card {
+  width: 100%; max-width: 440px;
+  background: var(--bg-glass2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-xl); padding: 36px 28px;
+  box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.pa-card::before {
+  content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.pa-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--gold-dim); border: 1px solid rgba(226,182,90,.22);
+  color: var(--gold); border-radius: 100px;
+  font-size: 11px; font-weight: 700; font-family: 'DM Mono',monospace;
+  letter-spacing: .6px; text-transform: uppercase; padding: 5px 12px; margin-bottom: 16px;
+}
+.pa-title { font-size: 20px; font-weight: 900; color: var(--text); margin-bottom: 4px; letter-spacing: -.3px; }
+.pa-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.pa-info-box {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 12px 16px;
+  font-size: 13px; color: var(--text-muted);
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 24px;
+}
+.pa-info-box span:first-child { flex-shrink: 0; color: var(--teal); }
+.pwd-rules { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.pwd-rules li { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); transition: color .2s; }
+.pwd-rules li.ok { color: var(--green); }
+.pwd-rules li.ok::before    { content: '✓'; color: var(--green); font-weight: 700; }
+.pwd-rules li:not(.ok)::before { content: '○'; color: var(--text-dim); }
+
+/* OR divider */
+.or-divider {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-dim); font-size: 12px; margin: 20px 0;
+}
+.or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+@media (max-width: 480px) {
+  .login-card, .pa-card { padding: 26px 18px; border-radius: var(--r-lg); }
+}
+
+/* ── Ícones de input — visíveis em dark e light ── */
+.login-card .input-icon,
+.pa-card    .input-icon {
+  color: #F1F1F1;
+  opacity: 0.50;
+}
+.login-card .input-wrap input:focus ~ .input-icon,
+.login-card .input-wrap:focus-within .input-icon,
+.pa-card    .input-wrap:focus-within .input-icon {
+  opacity: 1;
+  color: var(--teal, #009A93);
+}
+[data-theme="light"] .login-card .input-icon,
+[data-theme="light"] .pa-card    .input-icon {
+  color: var(--teal, #007d78);
+  opacity: 0.9;
+}
+</style>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  LOGIN VIEW
+// ═══════════════════════════════════════════════════
+
+function renderLogin() {
+  renderView(
+    '<div id="view-login">' +
+      '<div class="login-bg"></div>' +
+      '<div class="login-bg-grid"></div>' +
+      '<div class="login-wrapper">' +
+
+        /* ── HEADER ── */
+        '<div class="login-header">' +
+          '<div class="login-logo-ring">' +
+            '<div class="login-logo-bg"></div>' +
+            '<div class="login-logo-icon">' +
+              '<img src="" alt="Logo AD" class="app-logo-img" style="width:56px;height:56px;object-fit:contain;filter:brightness(0) invert(1);opacity:.95">' +
+            '</div>' +
+          '</div>' +
+          '<h1 class="login-church-name">AD Fonte da Salvação</h1>' +
+          '<p class="login-church-sub">Plataforma de Gestão Ministerial</p>' +
+        '</div>' +
+
+        /* ── CARD ── */
+        '<div class="login-card">' +
+          '<h2 class="login-card-title">Entrar na plataforma</h2>' +
+          '<p class="login-card-sub">Acesse com suas credenciais</p>' +
+
+          /* Erro inline */
+          '<div class="login-error-msg" id="login-error">' +
+            '<span>⚠</span>' +
+            '<span id="login-error-text"></span>' +
+          '</div>' +
+
+          /* Campo email */
+          '<div class="field">' +
+            '<label for="login-email">E-mail</label>' +
+            '<div class="input-wrap">' +
+              '<span class="input-icon" style="color:var(--teal,#009A93)"><i data-lucide="mail" style="width:18px;height:18px"></i></span>' +
+              '<input type="email" id="login-email" class="has-icon-left" ' +
+                'placeholder="seu@email.com" autocomplete="email" autofocus>' +
+            '</div>' +
+            '<span class="field-error">E-mail inválido.</span>' +
+          '</div>' +
+
+          /* Campo senha */
+          '<div class="field">' +
+            '<label for="login-senha">Senha</label>' +
+            '<div class="input-wrap" style="position:relative">' +
+              '<span class="input-icon" style="color:var(--teal,#009A93)"><i data-lucide="lock" style="width:18px;height:18px"></i></span>' +
+              '<input type="password" id="login-senha" class="has-icon-left has-icon-right" ' +
+                'placeholder="••••••••" autocomplete="current-password">' +
+              '<button type="button" class="pwd-toggle-btn" onclick="togglePwdVisibility(\'login-senha\', this)" tabindex="-1">' +
+                '<i data-lucide="eye" style="width:18px;height:18px"></i>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+
+          /* Esqueci senha */
+          '<div class="login-forgot-row">' +
+            '<button class="forgot-link" onclick="navigateTo(\'recuperar-senha\')">Esqueci minha senha</button>' +
+          '</div>' +
+
+          /* Botão entrar */
+          '<button class="btn btn-primary btn-full btn-lg" id="btn-login" onclick="handleLogin()">' +
+            '<span class="btn-spinner"></span>' +
+            '<span class="btn-text">Entrar</span>' +
+          '</button>' +
+
+        '</div>' + /* /login-card */
+
+        '<div class="login-footer" style="display:flex;align-items:center;justify-content:center;gap:12px">' +
+          '<span>AD Fonte da Salvação · Sistema de Gestão v1.0</span>' +
+          '<button class="theme-toggle-btn btn btn-ghost btn-sm" onclick="toggleTheme()" style="width:32px;height:32px;padding:0;border-radius:8px" title="Alternar tema">' +
+            '<i data-lucide="moon" style="width:16px;height:16px"></i>' +
+          '</button>' +
+        '</div>' +
+
+      '</div>' + /* /login-wrapper */
+    '</div>'   /* /view-login */
+  );
+
+  // Enter para submeter
+  document.getElementById('login-email').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('login-senha').focus();
+  });
+  document.getElementById('login-senha').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') handleLogin();
+  });
+}
+
+function handleLogin() {
+  var emailEl = document.getElementById('login-email');
+  var senhaEl = document.getElementById('login-senha');
+  var btn     = document.getElementById('btn-login');
+  var errBox  = document.getElementById('login-error');
+  var errTxt  = document.getElementById('login-error-text');
+
+  var email = emailEl.value.trim();
+  var senha = senhaEl.value;
+
+  // Ocultar erro anterior
+  errBox.classList.remove('visible');
+
+  // Validações client
+  var ok = true;
+  var emailField = emailEl.closest('.field');
+  var senhaField = senhaEl.closest('.field');
+  emailField.classList.remove('has-error');
+  senhaField.classList.remove('has-error');
+
+  if (!validateEmail(email)) {
+    emailField.classList.add('has-error');
+    ok = false;
+  }
+  if (!senha) {
+    senhaField.classList.add('has-error');
+    ok = false;
+  }
+  if (!ok) return;
+
+  setBtnLoading(btn, true);
+
+  sha256(senha).then(function(hash) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        setBtnLoading(btn, false);
+        if (res.success) {
+          saveSession(res.data);
+          if (res.data.primeiroAcesso) {
+            navigateTo('primeiro-acesso');
+          } else {
+            navigateTo('home');
+          }
+        } else {
+          errTxt.textContent = res.error;
+          errBox.classList.add('visible');
+          senhaEl.value = '';
+          senhaEl.focus();
+        }
+      })
+      .withFailureHandler(function(e) {
+        setBtnLoading(btn, false);
+        errTxt.textContent = 'Erro de conexão. Tente novamente.';
+        errBox.classList.add('visible');
+      })
+      .login(email, hash);
+  });
+}
+
+function togglePwdVisibility(inputId, btn) {
+  var input = document.getElementById(inputId);
+  if (!input) return;
+  var isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.innerHTML = isHidden
+    ? '<i data-lucide="eye-off" style="width:18px;height:18px"></i>'
+    : '<i data-lucide="eye" style="width:18px;height:18px"></i>';
+  if (window.lucide) lucide.createIcons();
+}
+</script>

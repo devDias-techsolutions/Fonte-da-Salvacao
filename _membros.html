@@ -106,7 +106,7 @@
 .mb-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
 
 /* ── Panel ── */
-#mb-panel { padding: 16px; max-width: 1100px; margin: 0 auto; padding-bottom: 80px; }
+#mb-panel { padding: 16px; max-width: 1100px; margin: 0 auto; padding-bottom: 80px; overflow-x: hidden; }
 @media (min-width: 640px) { #mb-panel { padding: 20px 24px 80px; } }
 
 /* ── KPI cards (reutiliza .ed-stat-card) ── */
@@ -243,6 +243,51 @@
 /* ── Modal confirm (reutiliza modal-overlay do design system) ── */
 #modal-mb-confirm .modal-box { max-width: 400px; }
 
+/* ── Modal Aniversariantes ── */
+#modal-mb-aniv .modal-box {
+  max-width: 560px; width: 95vw;
+  max-height: 80vh; display: flex; flex-direction: column;
+  padding: 0; overflow: hidden;
+}
+.mb-aniv-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mb-aniv-header-left { display: flex; align-items: center; gap: 10px; }
+.mb-aniv-title { font-size: 15px; font-weight: 800; color: var(--text); }
+.mb-aniv-body {
+  overflow-y: auto; padding: 14px 16px 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.mb-aniv-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--bg4); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: background .15s;
+}
+.mb-aniv-close:hover { background: var(--border); color: var(--text); }
+.mb-aniv-empty {
+  text-align: center; padding: 32px 0;
+  font-size: 13px; color: var(--text-muted);
+}
+
+/* ── Badge topnav ── */
+.mb-aniv-topnav-btn {
+  position: relative;
+  width: 38px; height: 38px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.mb-aniv-badge {
+  position: absolute; top: 2px; right: 2px;
+  background: var(--gold, #d7b15b); color: #000;
+  font-size: 9px; font-weight: 800;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px; line-height: 1; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--bg2);
+}
+
 /* ── Aniversariantes ── */
 .mb-bday-card {
   display: flex; align-items: center; gap: 10px;
@@ -291,7 +336,13 @@ var MB = {
   fotoZoom: 1,
   fotoX:    50,
   fotoY:    50,
-  proximoRol: '0001'
+  fotoMimeType: 'image/jpeg',
+  fotoNome:     'foto.jpg',
+  fotoNova:     false,   // true quando usuário selecionou nova foto nesta sessão
+  proximoRol: '0001',
+  // Cache: fileId → 'data:<mime>;base64,...'
+  // Evita CORS ao carregar fotos do Drive no iframe GAS.
+  _fotoCache: {}
 };
 
 var _mbConfirmCb = null;
@@ -385,9 +436,51 @@ function _mbLoad(cb) {
     .withSuccessHandler(function(r) {
       if (!_mbHandleResponse(r,'listarMembros')) return;
       MB.membros = r.data || [];
-      if (cb) cb();
+      // Pré-carrega base64 das fotos que ainda não estão em cache
+      _mbPreCarregarFotos(MB.membros, function(){ if (cb) cb(); });
     })
     .mb_listarMembros(token);
+}
+
+// Carrega base64 de todos os membros com foto (fileId) que ainda não estão no cache.
+// Faz as chamadas em série para não sobrecarregar o GAS.
+function _mbPreCarregarFotos(membros, done) {
+  var token = App.session && App.session.token;
+  // Coleta fileIds únicos que precisam ser buscados
+  var pendentes = [];
+  membros.forEach(function(m) {
+    var fid = m.foto ? String(m.foto).trim() : '';
+    // Considera fileId: não começa com 'data:' e não é URL http
+    if (fid && fid.indexOf('data:') !== 0 && fid.indexOf('http') !== 0 && !MB._fotoCache[fid]) {
+      // Evita duplicatas na fila
+      var jaEsta = false;
+      for (var pi = 0; pi < pendentes.length; pi++) { if (pendentes[pi] === fid) { jaEsta = true; break; } }
+      if (!jaEsta) pendentes.push(fid);
+    }
+    // Migração: se foto é URL antiga do Drive, limpa para não tentar carregar
+    if (fid && fid.indexOf('http') === 0) {
+      m.foto = ''; // trata como sem foto até ser re-uploadada
+    }
+  });
+
+  if (!pendentes.length) { if (done) done(); return; }
+
+  var idx = 0;
+  function next() {
+    if (idx >= pendentes.length) { if (done) done(); return; }
+    var fid = pendentes[idx];
+    idx++;
+    google.script.run
+      .withFailureHandler(function() { next(); }) // falha silenciosa — continua
+      .withSuccessHandler(function(res) {
+        if (res && res.success && res.data && res.data.base64) {
+          MB._fotoCache[fid] = 'data:' + (res.data.mimeType || 'image/jpeg') + ';base64,' + res.data.base64;
+        }
+        next();
+      })
+      .mb_getFotoMembro(token, fid);
+  }
+  next();
 }
 
 function _mbLoadProximoRol(cb) {
@@ -420,6 +513,10 @@ function _mbBuildTopnav() {
       '<div class="topnav-actions">'+
         /* Desktop */
         '<div class="mb-nav-desktop">'+
+          '<button class="btn btn-ghost btn-sm mb-aniv-topnav-btn" onclick="mbAbrirModalAniv()" title="Aniversariantes do mês" id="mb-aniv-topnav-btn">'+
+            '<i data-lucide="cake" style="width:18px;height:18px"></i>'+
+            '<span class="mb-aniv-badge" id="mb-aniv-badge" style="display:none"></span>'+
+          '</button>'+
           '<button class="theme-toggle-btn btn btn-ghost btn-sm" style="width:40px;padding:0" onclick="toggleTheme()">'+
             '<i data-lucide="'+ti+'" style="width:18px;height:18px"></i>'+
           '</button>'+
@@ -453,6 +550,10 @@ function _mbBuildTopnav() {
           '</button>'+
           '<div class="mb-nav-cfg-dd" id="mb-nav-cfg-dd">'+
             '<div class="cfg-label">Conta</div>'+
+            '<button onclick="mbToggleNavCfg();mbAbrirModalAniv()">'+
+              '<i data-lucide="cake" style="width:15px;height:15px"></i> Aniversariantes'+
+            '</button>'+
+            '<div class="divider"></div>'+
             '<button onclick="mbToggleNavCfg();toggleTheme()">'+
               '<i data-lucide="'+ti+'" style="width:15px;height:15px"></i> '+(ct==='dark'?'Modo claro':'Modo escuro')+
             '</button>'+
@@ -504,19 +605,42 @@ function renderMembros() {
   if (!App.session) { navigateTo('login'); return; }
   MB.tab = 'lista'; MB.editId = null; MB.selected = null;
   MB.search = ''; MB.filtroAtivo = 'todos';
-  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50; MB.fotoNova = false;
 
   renderView(
     _mbBuildTopnav() +
     _mbBuildTabs()   +
     '<div id="mb-panel" style="padding:16px;max-width:1100px;margin:0 auto;padding-bottom:80px"></div>' +
-    _mbModalConfirmHtml()
+    _mbModalConfirmHtml() +
+    _modalTrocarSenha() +
+    '<div class="modal-overlay" id="modal-mb-aniv" onclick="if(event.target===this)mbFecharModalAniv()">'+
+      '<div class="modal-box">'+
+        '<div class="mb-aniv-header">'+
+          '<div class="mb-aniv-header-left">'+
+            '<span style="font-size:22px">🎂</span>'+
+            '<div>'+
+              '<div class="mb-aniv-title">Aniversariantes do Mês</div>'+
+              '<div id="mb-aniv-sub" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>'+
+            '</div>'+
+          '</div>'+
+          '<button class="mb-aniv-close" onclick="mbFecharModalAniv()">'+
+            '<i data-lucide="x" style="width:15px;height:15px"></i>'+
+          '</button>'+
+        '</div>'+
+        '<div class="mb-aniv-body" id="mb-aniv-body"></div>'+
+      '</div>'+
+    '</div>'
   );
 
   setTimeout(function(){
     if (window.lucide) lucide.createIcons();
     applyLogoSrc();
-    _mbLoad(function(){ _mbRenderPanel(); });
+    _mbLoad(function(){
+      _mbRenderPanel();
+      mbAtualizarBadgeAniv();
+      var temAniv = MB.membros.some(function(m){ return _mbNesteMes(m.nascimento); });
+      if (temAniv) setTimeout(mbAbrirModalAniv, 500);
+    });
   }, 0);
 }
 
@@ -529,7 +653,7 @@ function mbSetTab(tab) {
   if (tab === 'lista') {
     _mbLoad(function(){ _mbRenderPanel(); });
   } else if (tab === 'form') {
-    MB.editId = null; MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+    MB.editId = null; MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50; MB.fotoNova = false;
     _mbLoadProximoRol(function(){ _mbRenderPanel(); });
   } else if (tab === 'carteirinha') {
     MB.cardSelected = null; MB.cardSelecionados = {}; MB.cardSearch = '';
@@ -580,9 +704,6 @@ function _mbBuildLista() {
       _mbKpi('kpi-semfoto',  'image-off',    semFoto,  'Sem foto')+
     '</div>';
 
-  // Aniversariantes do mês
-  var anivHtml = _mbBuildAniversariantes();
-
   // Toolbar
   var toolbar =
     '<div class="ed-section-header">'+
@@ -590,18 +711,26 @@ function _mbBuildLista() {
         '<div class="ed-section-title">Todos os Membros</div>'+
         '<div class="ed-section-sub">'+lista.length+' resultado(s) de '+total+' cadastrado(s)</div>'+
       '</div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<div style="display:flex;gap:8px;align-items:center">'+
         '<button class="btn btn-primary btn-sm" onclick="mbNovoMembro()">'+
           '<i data-lucide="user-plus" style="width:15px;height:15px"></i>'+
           '<span>Novo Membro</span>'+
         '</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="mbExportarJSON()" title="Exportar backup JSON">'+
-          '<i data-lucide="download" style="width:15px;height:15px"></i>'+
-        '</button>'+
-        '<label class="btn btn-ghost btn-sm" title="Importar backup JSON" style="cursor:pointer">'+
-          '<i data-lucide="upload" style="width:15px;height:15px"></i>'+
-          '<input type="file" accept=".json" onchange="mbImportarJSON(event)" style="display:none">'+
-        '</label>'+
+        '<div class="mb-toolbar-more-wrap">'+
+          '<button class="btn btn-ghost btn-sm" onclick="mbToggleToolbarMore(event)" title="Mais opções" style="width:34px;padding:0">'+
+            '<i data-lucide="more-horizontal" style="width:15px;height:15px"></i>'+
+          '</button>'+
+          '<div class="mb-toolbar-more-dd" id="mb-toolbar-more-dd">'+
+            '<div class="dd-label">Backup</div>'+
+            '<button onclick="mbCloseToolbarMore();mbExportarJSON()">'+
+              '<i data-lucide="download" style="width:14px;height:14px"></i> Exportar JSON'+
+            '</button>'+
+            '<label style="cursor:pointer">'+
+              '<i data-lucide="upload" style="width:14px;height:14px"></i> Importar JSON'+
+              '<input type="file" accept=".json" onchange="mbCloseToolbarMore();mbImportarJSON(event)" style="display:none">'+
+            '</label>'+
+          '</div>'+
+        '</div>'+
       '</div>'+
     '</div>';
 
@@ -637,7 +766,7 @@ function _mbBuildLista() {
       listaHtml +=
         '<div class="ed-list-item" onclick="mbVerDetalhe(\''+_mbEsc(m.id)+'\')">'+
           '<div class="ed-list-avatar">'+
-            (m.foto ? '<img src="'+_mbEsc(m.foto)+'" alt="'+_mbEsc(m.nome)+'" style="transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">' : _mbEsc(inicial))+
+            (m.foto ? '<img src="'+(MB._fotoCache[m.foto]||'')+'" alt="'+_mbEsc(m.nome)+'" style="transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">' : _mbEsc(inicial))+
           '</div>'+
           '<div class="ed-list-info">'+
             '<div class="ed-list-name">'+
@@ -652,16 +781,13 @@ function _mbBuildLista() {
             '<button class="ed-item-btn" onclick="event.stopPropagation();mbEditarMembro(\''+_mbEsc(m.id)+'\')" title="Editar">'+
               '<i data-lucide="pencil" style="width:13px;height:13px"></i>'+
             '</button>'+
-            '<button class="ed-item-btn danger" onclick="event.stopPropagation();mbConfirmarDeletar(\''+_mbEsc(m.id)+'\')" title="Excluir">'+
-              '<i data-lucide="trash-2" style="width:13px;height:13px"></i>'+
-            '</button>'+
           '</div>'+
         '</div>';
     });
     listaHtml += '</div>';
   }
 
-  return kpis + anivHtml + toolbar + busca + listaHtml;
+  return kpis + toolbar + busca + listaHtml;
 }
 
 function _mbKpi(klass, icon, val, label) {
@@ -688,7 +814,7 @@ function _mbBuildAniversariantes() {
     html +=
       '<div class="mb-bday-card'+(hoje?' hoje':'')+'\" onclick="mbVerDetalhe(\''+_mbEsc(m.id)+'\')">'+
         '<div class="ed-list-avatar">'+
-          (m.foto ? '<img src="'+_mbEsc(m.foto)+'">' : _mbEsc((m.nome||'?')[0].toUpperCase()))+
+          (m.foto ? '<img src="'+(MB._fotoCache[m.foto]||'')+'">' : _mbEsc((m.nome||'?')[0].toUpperCase()))+
         '</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:13px;font-weight:700;color:var(--text)">'+_mbEsc(m.nome)+'</div>'+
@@ -705,7 +831,7 @@ function _mbBuildAniversariantes() {
 // ── Navegação interna ────────────────────────────────────
 function mbNovoMembro() {
   MB.tab = 'form'; MB.editId = null;
-  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50; MB.fotoNova = false;
   document.querySelectorAll('.mb-tab').forEach(function(b){
     b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('form')");
   });
@@ -716,10 +842,13 @@ function mbEditarMembro(id) {
   var m = MB.membros.filter(function(x){ return String(x.id)===String(id); })[0];
   if (!m) return;
   MB.editId   = id;
-  MB.fotoData = m.foto   || '';
+  // Se a foto está no cache (base64), usa; senão deixa vazio
+  var fid = m.foto ? String(m.foto).trim() : '';
+  MB.fotoData = (fid && MB._fotoCache[fid]) ? MB._fotoCache[fid] : (fid.indexOf('data:') === 0 ? fid : '');
   MB.fotoZoom = parseFloat(m.fotoZoom) || 1;
   MB.fotoX    = parseFloat(m.fotoX)    || 50;
   MB.fotoY    = parseFloat(m.fotoY)    || 50;
+  MB.fotoNova = false; // foto existente — não re-envia a menos que o usuário troque
   MB.tab = 'form';
   document.querySelectorAll('.mb-tab').forEach(function(b){
     b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('form')");
@@ -936,12 +1065,32 @@ function _mbBuildForm() {
 /* ── Foto handlers ── */
 function mbFotoChange(e) {
   var file = e.target.files[0]; if (!file) return;
+  // Comprime a imagem para no máximo 400x533 (proporção 3x4) antes de armazenar
   var reader = new FileReader();
   reader.onloadend = function(){
-    MB.fotoData = reader.result;
-    mbAtualizarFotoPreview();
-    var zw = document.getElementById('mb-zoom-wrap');
-    if (zw) zw.style.display = 'block';
+    var img = new Image();
+    img.onload = function(){
+      var MAX_W = 400, MAX_H = 533;
+      var w = img.width, h = img.height;
+      // Redimensiona mantendo proporção
+      if (w > MAX_W || h > MAX_H) {
+        var ratioW = MAX_W / w, ratioH = MAX_H / h;
+        var ratio  = Math.min(ratioW, ratioH);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      var canvas  = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      MB.fotoData     = canvas.toDataURL('image/jpeg', 0.82); // comprime para JPEG qualidade 82%
+      MB.fotoMimeType = 'image/jpeg';
+      MB.fotoNome     = (file.name || 'foto.jpg').replace(/\.[^.]+$/, '') + '.jpg';
+      MB.fotoNova     = true; // flag: usuário selecionou nova foto
+      mbAtualizarFotoPreview();
+      var zw = document.getElementById('mb-zoom-wrap');
+      if (zw) zw.style.display = 'block';
+    };
+    img.src = reader.result;
   };
   reader.readAsDataURL(file);
 }
@@ -959,7 +1108,7 @@ function mbAtualizarFotoPreview() {
   }
 }
 function mbRemoverFoto() {
-  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
+  MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50; MB.fotoNova = false;
   mbAtualizarFotoPreview();
   var zw = document.getElementById('mb-zoom-wrap'); if (zw) zw.style.display = 'none';
 }
@@ -1016,53 +1165,95 @@ function mbSalvarForm() {
   var ativoEl = document.getElementById('mbf-ativo');
   var ativo   = MB.editId ? (ativoEl ? ativoEl.value !== 'false' : mAtual.ativo !== false) : true;
 
-  var membro = {
-    id:          MB.editId || '',
-    rol:         (document.getElementById('mbf-rol').value || '').trim(),
-    nome:        document.getElementById('mbf-nome').value.trim(),
-    sexo:        document.getElementById('mbf-sexo').value,
-    nascimento:  document.getElementById('mbf-nascimento').value.trim(),
-    nomeMae:     document.getElementById('mbf-nomeMae').value.trim(),
-    nomePai:     document.getElementById('mbf-nomePai').value.trim(),
-    estadoCivil: document.getElementById('mbf-estadoCivil').value,
-    batismo:     document.getElementById('mbf-batismo').value.trim(),
-    Igreja:      document.getElementById('mbf-Igreja').value.trim(),
-    funcao:      document.getElementById('mbf-funcao').value.trim(),
-    rua:         document.getElementById('mbf-rua').value.trim(),
-    numero:      document.getElementById('mbf-numero').value.trim(),
-    bairro:      document.getElementById('mbf-bairro').value.trim(),
-    cidade:      document.getElementById('mbf-cidade').value.trim(),
-    estado:      document.getElementById('mbf-estado').value,
-    cep:         document.getElementById('mbf-cep').value.trim(),
-    celular:     document.getElementById('mbf-celular').value.trim(),
-    email:       document.getElementById('mbf-email').value.trim(),
-    rg:          document.getElementById('mbf-rg').value.trim(),
-    cpf:         document.getElementById('mbf-cpf').value.trim(),
-    foto:        MB.fotoData,
-    fotoZoom:    MB.fotoZoom,
-    fotoX:       MB.fotoX,
-    fotoY:       MB.fotoY,
-    ativo:       ativo
-  };
+  // Foto: mantém fileId existente; substitui apenas se usuário escolheu nova foto
+  var fotoAtual = MB.fotoNova ? null : (mAtual.foto || '');
 
-  var token = App.session && App.session.token;
-  google.script.run
-    .withFailureHandler(function(e){
-      if (btn) btn.classList.remove('loading');
-      showToast((e && e.message) || 'Erro ao salvar.', 'error');
-    })
-    .withSuccessHandler(function(r){
-      if (btn) btn.classList.remove('loading');
-      if (!_mbHandleResponse(r, 'salvarMembro')) return;
-      showToast(MB.editId ? 'Membro atualizado!' : 'Membro cadastrado!', 'success');
-      MB.editId = null; MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50;
-      MB.tab = 'lista';
-      document.querySelectorAll('.mb-tab').forEach(function(b){
-        b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('lista')");
-      });
-      _mbLoad(function(){ _mbRenderPanel(); });
-    })
-    .mb_salvarMembro(token, membro);
+  // ── Função interna que finaliza o salvamento com a URL da foto já resolvida ──
+  function _doSalvar(fotoUrl) {
+    var membro = {
+      id:          MB.editId || '',
+      rol:         (document.getElementById('mbf-rol').value || '').trim(),
+      nome:        document.getElementById('mbf-nome').value.trim(),
+      sexo:        document.getElementById('mbf-sexo').value,
+      nascimento:  document.getElementById('mbf-nascimento').value.trim(),
+      nomeMae:     document.getElementById('mbf-nomeMae').value.trim(),
+      nomePai:     document.getElementById('mbf-nomePai').value.trim(),
+      estadoCivil: document.getElementById('mbf-estadoCivil').value,
+      batismo:     document.getElementById('mbf-batismo').value.trim(),
+      Igreja:      document.getElementById('mbf-Igreja').value.trim(),
+      funcao:      document.getElementById('mbf-funcao').value.trim(),
+      rua:         document.getElementById('mbf-rua').value.trim(),
+      numero:      document.getElementById('mbf-numero').value.trim(),
+      bairro:      document.getElementById('mbf-bairro').value.trim(),
+      cidade:      document.getElementById('mbf-cidade').value.trim(),
+      estado:      document.getElementById('mbf-estado').value,
+      cep:         document.getElementById('mbf-cep').value.trim(),
+      celular:     document.getElementById('mbf-celular').value.trim(),
+      email:       document.getElementById('mbf-email').value.trim(),
+      rg:          document.getElementById('mbf-rg').value.trim(),
+      cpf:         document.getElementById('mbf-cpf').value.trim(),
+      foto:        fotoUrl || '',
+      fotoZoom:    MB.fotoZoom,
+      fotoX:       MB.fotoX,
+      fotoY:       MB.fotoY,
+      ativo:       ativo
+    };
+
+    var token = App.session && App.session.token;
+    google.script.run
+      .withFailureHandler(function(e){
+        if (btn) btn.classList.remove('loading');
+        showToast((e && e.message) || 'Erro ao salvar.', 'error');
+      })
+      .withSuccessHandler(function(r){
+        if (btn) btn.classList.remove('loading');
+        if (!_mbHandleResponse(r, 'salvarMembro')) return;
+        showToast(MB.editId ? 'Membro atualizado!' : 'Membro cadastrado!', 'success');
+        MB.editId = null; MB.fotoData = ''; MB.fotoZoom = 1; MB.fotoX = 50; MB.fotoY = 50; MB.fotoNova = false;
+        MB.tab = 'lista';
+        document.querySelectorAll('.mb-tab').forEach(function(b){
+          b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('lista')");
+        });
+        _mbLoad(function(){ _mbRenderPanel(); });
+      })
+      .mb_salvarMembro(token, membro);
+  }
+
+  // ── Se há nova foto, faz upload para o Drive primeiro ──
+  if (MB.fotoNova && MB.fotoData) {
+    showToast('Enviando foto para o Drive...', 'info');
+
+    // Extrai o base64 puro (remove prefixo "data:image/jpeg;base64,")
+    var base64Pure = MB.fotoData.replace(/^data:[^;]+;base64,/, '');
+
+    // Gera ID temporário para o arquivo (usa editId se existir, senão um timestamp)
+    var membroIdTemp = MB.editId || ('novo_' + Date.now());
+    var token = App.session && App.session.token;
+
+    google.script.run
+      .withFailureHandler(function(e){
+        if (btn) btn.classList.remove('loading');
+        showToast('Erro ao enviar foto: ' + ((e && e.message) || 'falha no upload.'), 'error');
+      })
+      .withSuccessHandler(function(r){
+        if (!r || !r.success) {
+          if (btn) btn.classList.remove('loading');
+          showToast('Erro no upload da foto: ' + (r && r.error ? r.error : 'resposta inválida.'), 'error');
+          return;
+        }
+        // Upload ok — prossegue salvando o membro com o fileId do Drive
+        var novoFileId = (r.data && r.data.fileId) ? r.data.fileId : '';
+        // Popula cache com o base64 recém-recebido para uso imediato
+        if (novoFileId && r.data.base64) {
+          MB._fotoCache[novoFileId] = 'data:' + (r.data.mimeType || 'image/jpeg') + ';base64,' + r.data.base64;
+        }
+        _doSalvar(novoFileId);
+      })
+      .mb_salvarFotoMembro(token, membroIdTemp, base64Pure, MB.fotoMimeType || 'image/jpeg', MB.fotoNome || 'foto.jpg');
+  } else {
+    // Sem nova foto: salva com a URL já existente
+    _doSalvar(fotoAtual);
+  }
 }
 
 // ════════════════════════════════════════════
@@ -1108,7 +1299,7 @@ function _mbBuildDetalhe() {
       '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">'+
         '<div style="width:68px;height:90px;border-radius:8px;overflow:hidden;border:2px solid var(--border);flex-shrink:0;background:var(--bg4)">'+
           (m.foto
-            ? '<img src="'+_mbEsc(m.foto)+'" style="width:100%;height:100%;object-fit:cover;transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">'
+            ? '<img src="'+(MB._fotoCache[m.foto]||'')+'" style="width:100%;height:100%;object-fit:cover;transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">'
             : '<div class="mb-foto-placeholder" style="height:100%">👤</div>')+
         '</div>'+
         '<div style="flex:1">'+
@@ -1118,8 +1309,11 @@ function _mbBuildDetalhe() {
             '<button class="btn btn-secondary btn-sm" onclick="mbEditarMembro(\''+_mbEsc(m.id)+'\')">'+
               '<i data-lucide="pencil" style="width:14px;height:14px"></i> Editar'+
             '</button>'+
-            '<button class="btn btn-danger btn-sm" onclick="mbConfirmarDeletar(\''+_mbEsc(m.id)+'\')">'+
-              '<i data-lucide="trash-2" style="width:14px;height:14px"></i>'+
+            '<button class="btn btn-ghost btn-sm" onclick="mbAbrirCarteirinhaDetalhe(\''+_mbEsc(m.id)+'\')" title="Gerar carteirinha">'+
+              '<i data-lucide="credit-card" style="width:14px;height:14px"></i> Carteirinha'+
+            '</button>'+
+            '<button class="btn btn-danger btn-sm" onclick="mbConfirmarDeletar(\''+_mbEsc(m.id)+'\')" style="margin-left:auto">'+
+              '<i data-lucide="trash-2" style="width:14px;height:14px"></i> Excluir'+
             '</button>'+
           '</div>'+
         '</div>'+
@@ -1183,6 +1377,98 @@ function _mbDeletar(id) {
       _mbLoad(function(){ _mbRenderPanel(); });
     })
     .mb_deletarMembro(token, id);
+}
+
+// ── Modal Aniversariantes ────────────────────────────────
+function mbAtualizarBadgeAniv() {
+  var lista = MB.membros.filter(function(m){ return _mbNesteMes(m.nascimento); });
+  var badge = document.getElementById('mb-aniv-badge');
+  if (!badge) return;
+  if (lista.length > 0) {
+    badge.textContent = lista.length;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function mbAbrirModalAniv() {
+  var overlay = document.getElementById('modal-mb-aniv');
+  if (!overlay) return;
+
+  var lista = MB.membros.filter(function(m){ return _mbNesteMes(m.nascimento); })
+    .sort(function(a,b){ return (_mbDiasAniv(a.nascimento)||999)-(_mbDiasAniv(b.nascimento)||999); });
+
+  var sub  = document.getElementById('mb-aniv-sub');
+  var body = document.getElementById('mb-aniv-body');
+  var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  if (sub) sub.textContent = meses[new Date().getMonth()] + ' · ' + lista.length + ' aniversariante(s)';
+
+  if (!lista.length) {
+    if (body) body.innerHTML = '<div class="mb-aniv-empty">🎈 Nenhum aniversariante este mês.</div>';
+  } else {
+    var html = '';
+    lista.forEach(function(m){
+      var dias  = _mbDiasAniv(m.nascimento);
+      var hoje  = dias === 0;
+      var idade = ((_mbIdade(m.nascimento)||0) + 1);
+      html +=
+        '<div class="mb-bday-card'+(hoje?' hoje':'')+'\" onclick="mbFecharModalAniv();mbVerDetalhe(\''+_mbEsc(m.id)+'\')" style="cursor:pointer">'+
+          '<div class="ed-list-avatar">'+
+            (m.foto ? '<img src="'+(MB._fotoCache[m.foto]||'')+'">' : _mbEsc((m.nome||'?')[0].toUpperCase()))+
+          '</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:13px;font-weight:700;color:var(--text)">'+_mbEsc(m.nome)+'</div>'+
+            '<div style="font-size:11px;color:var(--text-muted)">'+_mbEsc(m.nascimento)+' · Fará '+idade+' anos</div>'+
+          '</div>'+
+          '<span class="badge '+(hoje?'badge-gold':'badge-teal')+'">'+
+            (hoje ? '🎉 HOJE!' : dias+' dia'+(dias!==1?'s':''))+
+          '</span>'+
+        '</div>';
+    });
+    if (body) body.innerHTML = html;
+  }
+
+  if (window.lucide) lucide.createIcons();
+  overlay.classList.add('open');
+}
+
+function mbFecharModalAniv() {
+  var overlay = document.getElementById('modal-mb-aniv');
+  if (overlay) overlay.classList.remove('open');
+}
+
+// ── Dropdown "Mais" da toolbar ───────────────────────────
+function mbToggleToolbarMore(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('mb-toolbar-more-dd'); if (!dd) return;
+  var opening = !dd.classList.contains('open');
+  dd.classList.toggle('open');
+  if (opening) {
+    if (window.lucide) lucide.createIcons();
+    setTimeout(function(){
+      document.addEventListener('click', function _close(ev){
+        if (!dd.contains(ev.target)){ dd.classList.remove('open'); document.removeEventListener('click',_close); }
+      });
+    }, 0);
+  }
+}
+function mbCloseToolbarMore() {
+  var dd = document.getElementById('mb-toolbar-more-dd'); if (dd) dd.classList.remove('open');
+}
+
+// ── Atalho carteirinha a partir do detalhe ───────────────
+function mbAbrirCarteirinhaDetalhe(id) {
+  MB.tab = 'carteirinha';
+  MB.cardSelected = id;
+  MB.cardSelecionados = {};
+  MB.cardSearch = '';
+  document.querySelectorAll('.mb-tab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('onclick') === "mbSetTab('carteirinha')");
+  });
+  _mbRenderPanel();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ════════════════════════════════════════════
@@ -1266,13 +1552,38 @@ function mbImportarJSON(e) {
           ativo:       (m.ativo !== false && m.ativo !== 'FALSE' && m.Ativo !== false)
         };
         if (!norm.nome) { erros++; next(i+1); return; }
-        google.script.run
-          .withFailureHandler(function(){ erros++; next(i+1); })
-          .withSuccessHandler(function(r){
-            if (r && r.success) ok++; else erros++;
-            next(i+1);
-          })
-          .mb_salvarMembro(token, norm);
+
+        // Se foto for base64, faz upload para o Drive antes de salvar
+        var fotoRaw = norm.foto || '';
+        if (fotoRaw && fotoRaw.indexOf('data:') === 0) {
+          var base64Pure = fotoRaw.replace(/^data:[^;]+;base64,/, '');
+          var mimeType   = (fotoRaw.match(/^data:([^;]+);/) || [])[1] || 'image/jpeg';
+          var memId      = norm.id || ('imp_' + i + '_' + Date.now());
+          google.script.run
+            .withFailureHandler(function(){ norm.foto = ''; _salvarNorm(); })
+            .withSuccessHandler(function(ru){
+              norm.foto = (ru && ru.success && ru.data && ru.data.fileId) ? ru.data.fileId : '';
+              // Popula cache para uso imediato
+              if (norm.foto && ru.data.base64) {
+                MB._fotoCache[norm.foto] = 'data:' + (ru.data.mimeType || 'image/jpeg') + ';base64,' + ru.data.base64;
+              }
+              _salvarNorm();
+            })
+            .mb_salvarFotoMembro(token, memId, base64Pure, mimeType, 'foto_' + memId + '.jpg');
+        } else {
+          // URL já existente (Drive ou vazio) — salva direto
+          _salvarNorm();
+        }
+
+        function _salvarNorm() {
+          google.script.run
+            .withFailureHandler(function(){ erros++; next(i+1); })
+            .withSuccessHandler(function(r){
+              if (r && r.success) ok++; else erros++;
+              next(i+1);
+            })
+            .mb_salvarMembro(token, norm);
+        }
       }
       showToast('Importando '+total+' registros...','info');
       next(0);
@@ -1359,8 +1670,8 @@ function mbImportarJSON(e) {
 }
 .mb-card-front .card-logo img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(1); }
 .mb-card-front .card-church-name { display: flex; flex-direction: column; }
-.mb-card-front .card-church-name .line1 { font-size: 10px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.2; }
-.mb-card-front .card-church-name .line2 { font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+.mb-card-front .card-church-name .line1 { font-size: 10px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.2; white-space: nowrap; }
+.mb-card-front .card-church-name .line2 { font-size: 13px; font-weight: 800; letter-spacing: 1px; white-space: nowrap; }
 
 .mb-card-front .card-member-row {
   display: flex; gap: 14px; align-items: flex-start;
@@ -1413,6 +1724,7 @@ function mbImportarJSON(e) {
   color: #fff;
   width: 100%; height: 100%;
   position: relative;
+  overflow: hidden;
 }
 .mb-card-back .card-watermark {
   position: absolute;
@@ -1425,7 +1737,7 @@ function mbImportarJSON(e) {
 .mb-card-back .card-watermark img { width: 100%; height: 100%; object-fit: contain; }
 .mb-card-back .card-body {
   position: relative; z-index: 1;
-  padding: 12px 20px;
+  padding: 8px 16px 6px;
   height: 100%; box-sizing: border-box;
   display: flex; flex-direction: column;
   justify-content: space-between;
@@ -1435,14 +1747,14 @@ function mbImportarJSON(e) {
   text-align: center;
   text-transform: uppercase; letter-spacing: 1px;
   border-bottom: 1px solid rgba(255,255,255,0.2);
-  padding-bottom: 4px; margin-bottom: 10px;
+  padding-bottom: 3px; margin-bottom: 6px;
 }
 .mb-card-back .back-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
 }
 .mb-card-back .back-field {
   border-bottom: 1px solid rgba(255,255,255,0.1);
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 .mb-card-back .back-field .bf-label {
   font-size: 7px; opacity: 0.7; font-weight: 600;
@@ -1455,29 +1767,29 @@ function mbImportarJSON(e) {
 .mb-card-back .back-sign {
   text-align: center;
   display: flex; flex-direction: column;
-  align-items: center; margin-top: -4px;
+  align-items: center; margin-top: 0;
 }
 .mb-card-back .back-sign .sign-img-wrap {
-  width: 120px; height: 30px; margin-bottom: 2px;
+  width: 120px; height: 26px; margin-bottom: 0;
   display: flex; align-items: center; justify-content: center;
 }
 .mb-card-back .back-sign .sign-img-wrap img {
   width: 170%; height: 100%; object-fit: contain;
-  filter: brightness(0) invert(1); margin-top: 10px;
+  filter: brightness(0) invert(1); margin-top: 6px;
 }
 .mb-card-back .back-sign .sign-line {
-  width: 70%; border-bottom: 1px solid #fff; margin-bottom: 20px;
+  width: 70%; border-bottom: 1px solid #fff; margin-bottom: 14px;
 }
 .mb-card-back .back-sign .sign-name {
-  margin-top: -16px; font-size: 8px; font-weight: 700;
-  text-transform: uppercase;
+  margin-top: -12px; font-size: 8px; font-weight: 700;
+  text-transform: uppercase; white-space: nowrap;
 }
-.mb-card-back .back-sign .sign-cargo { margin-bottom: 2px; font-size: 7px; font-weight: 500; opacity: 0.8; }
+.mb-card-back .back-sign .sign-cargo { margin-bottom: 1px; font-size: 7px; font-weight: 500; opacity: 0.8; }
 .mb-card-back .back-address {
   padding-top: 3px;
   border-top: 1px solid rgba(217,224,240,0.2);
-  font-size: 7.5px; text-align: center;
-  margin-top: 2px; line-height: 1.2; opacity: 0.9;
+  font-size: 7px; text-align: center;
+  margin-top: 0; line-height: 1.2; opacity: 0.9;
 }
 .mb-card-back .back-address .ba1 { font-weight: 700; }
 .mb-card-back .back-address .ba2 { font-weight: 500; }
@@ -1488,6 +1800,9 @@ function mbImportarJSON(e) {
   display: flex; gap: 20px; align-items: flex-start;
   justify-content: center; flex-wrap: wrap;
   margin-bottom: 20px;
+  /* Impede que os cards de 340px estourem a largura no mobile */
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 .mb-card-preview-label {
   font-size: 10px; font-weight: 700; letter-spacing: 1px;
@@ -1495,6 +1810,71 @@ function mbImportarJSON(e) {
   text-align: center; margin-bottom: 6px;
 }
 .mb-card-shadow { box-shadow: 0 8px 32px rgba(0,16,64,0.35); border-radius: 14px; }
+
+/* Escala o card para caber na tela em mobile sem cortar */
+@media (max-width: 380px) {
+  .mb-card-preview-wrap { gap: 12px; }
+  .mb-card { transform-origin: top left; transform: scale(0.82); }
+  /* Compensa o espaço "perdido" pelo scale para não sobrepor o próximo elemento */
+  .mb-card-preview-wrap > div { overflow: hidden; }
+}
+@media (min-width: 381px) and (max-width: 479px) {
+  .mb-card { transform-origin: top left; transform: scale(0.92); }
+  .mb-card-preview-wrap > div { overflow: hidden; }
+}
+
+/* ── Dropdown "Mais" da toolbar ── */
+.mb-toolbar-more-wrap { position: relative; display: inline-block; }
+.mb-toolbar-more-dd {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 14px; padding: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.28); z-index: 500;
+  min-width: 200px; display: none; flex-direction: column; gap: 2px;
+}
+.mb-toolbar-more-dd.open { display: flex; }
+.mb-toolbar-more-dd button,
+.mb-toolbar-more-dd label {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px; border-radius: 9px; border: none;
+  background: none; cursor: pointer; font-size: 12px; font-weight: 600;
+  color: var(--text); text-align: left; width: 100%;
+  font-family: 'Plus Jakarta Sans', sans-serif; transition: background .15s;
+}
+.mb-toolbar-more-dd button:hover,
+.mb-toolbar-more-dd label:hover { background: var(--bg4); }
+.mb-toolbar-more-dd .dd-label {
+  font-size: 10px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .07em; padding: 4px 12px 2px;
+}
+
+/* ── Painel two-column da aba Carteirinha ── */
+.mb-card-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (min-width: 780px) {
+  .mb-card-layout { grid-template-columns: auto 1fr; }
+}
+.mb-card-panel-preview {
+  background: var(--glass-bg-premium); border: var(--glass-border-premium);
+  border-radius: 18px; padding: 18px 16px 16px;
+  backdrop-filter: blur(14px);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.mb-card-panel-list {
+  background: var(--glass-bg-premium); border: var(--glass-border-premium);
+  border-radius: 18px; padding: 16px;
+  backdrop-filter: blur(14px);
+}
+.mb-card-panel-actions {
+  display: flex; flex-direction: column; gap: 8px; width: 100%;
+}
+.mb-card-panel-actions .btn {
+  justify-content: center;
+}
 
 /* ── Lote grid ── */
 .mb-lote-grid {
@@ -1505,13 +1885,16 @@ function mbImportarJSON(e) {
   .mb-lote-grid { grid-template-columns: repeat(2, 1fr); }
 }
 .mb-lote-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 12px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 10px; border-radius: 12px;
   background: var(--glass-bg-premium); border: var(--glass-border-premium);
   cursor: pointer; transition: border-color .15s;
+  /* Impede overflow do item na coluna */
+  min-width: 0; overflow: hidden;
 }
 .mb-lote-item:hover { border-color: var(--teal-border); }
 .mb-lote-item.selected { border-color: var(--teal); background: var(--teal-dim); }
+.mb-lote-item-active { border-color: var(--teal-border) !important; box-shadow: inset 3px 0 0 var(--teal); }
 .mb-lote-check {
   width: 20px; height: 20px; border-radius: 6px;
   border: 2px solid var(--border); background: var(--bg4);
@@ -1521,6 +1904,13 @@ function mbImportarJSON(e) {
 }
 .mb-lote-item.selected .mb-lote-check {
   background: var(--teal); border-color: var(--teal); color: #fff;
+}
+/* Texto do lote item não extrapola */
+.mb-lote-item > div[style*="flex:1"] {
+  min-width: 0;
+}
+.mb-lote-item > div[style*="flex:1"] > div {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* ── Toast de progresso PDF ── */
@@ -1569,8 +1959,10 @@ var MB_CARD = {
 
 // ── Monta HTML da FRENTE do cartão ──────────────────────
 function mbCard_htmlFrente(m, forPrint) {
-  var foto = m.foto
-    ? '<img src="'+m.foto+'" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%;transform:scale('+(m.fotoZoom||1)+')">'
+  // Resolve src da foto: usa cache base64 (nunca URL do Drive — CORS no GAS)
+  var fotoSrc = (m.foto && MB._fotoCache[m.foto]) ? MB._fotoCache[m.foto] : '';
+  var foto = fotoSrc
+    ? '<img src="'+fotoSrc+'" style="width:100%;height:100%;object-fit:cover;object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%;transform:scale('+(m.fotoZoom||1)+')">'
     : '<div class="no-photo">👤</div>';
 
   return (
@@ -1677,7 +2069,7 @@ function mbCard_htmlVerso(m, forPrint) {
   );
 }
 
-// ── Tab: CARTEIRINHA — lista + preview + botões ──────────
+// ── Tab: CARTEIRINHA — painel preview + painel lista ────
 function _mbBuildCarteirinha() {
   var ativos = MB.membros.filter(function(m){ return m.ativo !== false; });
 
@@ -1689,109 +2081,103 @@ function _mbBuildCarteirinha() {
     '</div>';
   }
 
-  /* Preview do primeiro membro selecionado */
   var selected = MB.cardSelected
     ? (MB.membros.filter(function(m){ return String(m.id)===String(MB.cardSelected); })[0] || ativos[0])
     : ativos[0];
 
   MB.cardSelected = selected.id;
+  MB.cardSelecionados = MB.cardSelecionados || {};
 
-  var preview =
-    '<div style="margin-bottom:20px">'+
-      '<div class="ed-section-title" style="margin-bottom:14px">🪪 Preview</div>'+
-      '<div class="mb-card-preview-wrap">'+
-        '<div>'+
-          '<div class="mb-card-preview-label">Frente</div>'+
-          mbCard_htmlFrente(selected, false)+
-        '</div>'+
-        '<div>'+
-          '<div class="mb-card-preview-label">Verso</div>'+
-          mbCard_htmlVerso(selected, false)+
-        '</div>'+
+  var nSel = Object.keys(MB.cardSelecionados).length;
+  var loteLabel = nSel > 0 ? ' Gerar PDF Lote ('+nSel+')' : ' Gerar PDF Lote';
+  var loteDisabled = nSel === 0 ? ' disabled' : '';
+
+  /* ── Painel esquerdo: preview + ações ── */
+  var panelPreview =
+    '<div class="mb-card-panel-preview">'+
+      '<div style="text-align:center">'+
+        '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">'+_mbEsc(selected.nome||'Membro')+'</div>'+
+        '<div class="mb-card-preview-label">Frente</div>'+
+        mbCard_htmlFrente(selected, false)+
+        '<div class="mb-card-preview-label" style="margin-top:14px">Verso</div>'+
+        mbCard_htmlVerso(selected, false)+
       '</div>'+
-      /* Ações do membro selecionado */
-      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">'+
+      '<div class="mb-card-panel-actions">'+
         '<button class="btn btn-primary btn-sm" onclick="mbCard_downloadPDF(\''+selected.id+'\')">'+
-          '<i data-lucide="file-down" style="width:15px;height:15px"></i> PDF Carteirinha'+
+          '<i data-lucide="file-down" style="width:14px;height:14px"></i> PDF (frente + verso)'+
         '</button>'+
         '<button class="btn btn-secondary btn-sm" onclick="mbCard_downloadPNG(\''+selected.id+'\',false)">'+
-          '<i data-lucide="image" style="width:15px;height:15px"></i> PNG Frente'+
+          '<i data-lucide="image" style="width:14px;height:14px"></i> PNG — Frente'+
         '</button>'+
         '<button class="btn btn-secondary btn-sm" onclick="mbCard_downloadPNG(\''+selected.id+'\',true)">'+
-          '<i data-lucide="image" style="width:15px;height:15px"></i> PNG Verso'+
+          '<i data-lucide="image" style="width:14px;height:14px"></i> PNG — Verso'+
         '</button>'+
       '</div>'+
     '</div>';
 
-  /* Lista para seleção individual / lote */
-  var listaHtml =
-    '<div style="background:var(--glass-bg-premium);border:var(--glass-border-premium);border-radius:18px;padding:16px;backdrop-filter:blur(14px)">'+
-      '<div class="ed-section-header" style="margin-bottom:10px">'+
-        '<div>'+
-          '<div class="ed-section-title">Membros Ativos</div>'+
-          '<div class="ed-section-sub">'+ativos.length+' membro(s) · Clique para preview · Marque para lote</div>'+
-        '</div>'+
-        '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-          '<button class="btn btn-ghost btn-sm" onclick="mbCard_selecionarTodos()">'+
-            '<i data-lucide="check-square" style="width:14px;height:14px"></i> Todos'+
-          '</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="mbCard_deselecionarTodos()">'+
-            '<i data-lucide="square" style="width:14px;height:14px"></i> Nenhum'+
-          '</button>'+
-          '<button class="btn btn-primary btn-sm" id="btn-lote" onclick="mbCard_gerarLote()">'+
-            '<i data-lucide="layers" style="width:14px;height:14px"></i>'+
-            '<span id="btn-lote-txt"> Gerar PDF Lote</span>'+
-            '<div class="btn-spinner"></div>'+
-          '</button>'+
-        '</div>'+
-      '</div>'+
-
-      /* Busca */
-      '<div class="ed-search-wrap" style="margin-bottom:10px">'+
-        '<span class="ed-search-icon"><i data-lucide="search" style="width:15px;height:15px"></i></span>'+
-        '<input class="ed-search" type="text" placeholder="Buscar membro..." value="'+_mbEsc(MB.cardSearch||'')+'" oninput="MB.cardSearch=this.value;_mbRenderPanel()">'+
-      '</div>'+
-
-      '<div class="mb-lote-grid" id="mb-lote-grid">';
-
-  MB.cardSelecionados = MB.cardSelecionados || {};
-
+  /* ── Painel direito: lista de seleção para lote ── */
   var filtrados = ativos.filter(function(m){
     var q = (MB.cardSearch||'').toLowerCase();
     return !q || (m.nome||'').toLowerCase().indexOf(q)!==-1 || (m.rol||'').indexOf(q)!==-1;
   });
 
+  var itens = '';
   filtrados.forEach(function(m){
     var sel = !!MB.cardSelecionados[m.id];
-    var isSelected = String(m.id) === String(MB.cardSelected);
-    listaHtml +=
-      '<div class="mb-lote-item'+(sel?' selected':'')+'" id="lote-item-'+m.id+'">'+
+    var isActive = String(m.id) === String(MB.cardSelected);
+    itens +=
+      '<div class="mb-lote-item'+(sel?' selected':'')+(isActive?' mb-lote-item-active':'')+'" id="lote-item-'+m.id+'">'+
         '<div class="mb-lote-check" onclick="event.stopPropagation();mbCard_toggleSel(\''+m.id+'\')">'+
           (sel?'✓':'')+
         '</div>'+
         '<div class="ed-list-avatar" onclick="mbCard_selecionarPreview(\''+m.id+'\')" style="cursor:pointer">'+
-          (m.foto?'<img src="'+m.foto+'" style="width:100%;height:100%;object-fit:cover">':((m.nome||'?')[0].toUpperCase()))+
+          (m.foto?'<img src="'+(MB._fotoCache[m.foto]||'')+'" style="width:100%;height:100%;object-fit:cover">':((m.nome||'?')[0].toUpperCase()))+
         '</div>'+
         '<div style="flex:1;min-width:0;cursor:pointer" onclick="mbCard_selecionarPreview(\''+m.id+'\')">'+
           '<div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(m.nome||'—')+'</div>'+
           '<div style="font-size:10px;color:var(--text-muted)">ROL '+m.rol+' · '+(m.funcao||'Membro')+'</div>'+
         '</div>'+
-        '<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px" onclick="mbCard_downloadPDF(\''+m.id+'\')">'+
-          '<i data-lucide="file-down" style="width:13px;height:13px"></i>'+
+        '<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="event.stopPropagation();mbCard_downloadPDF(\''+m.id+'\')" title="PDF Carteirinha">'+
+          '<i data-lucide="file-down" style="width:13px;height:13px"></i> PDF'+
         '</button>'+
       '</div>';
   });
 
-  listaHtml += '</div></div>';
+  var panelList =
+    '<div class="mb-card-panel-list">'+
+      '<div class="ed-section-header" style="margin-bottom:10px">'+
+        '<div>'+
+          '<div class="ed-section-title">Membros Ativos</div>'+
+          '<div class="ed-section-sub">'+ativos.length+' membro(s) · Marque para lote · Clique para preview</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
+          '<button class="btn btn-ghost btn-sm" onclick="mbCard_selecionarTodos()" title="Selecionar todos">'+
+            '<i data-lucide="check-square" style="width:14px;height:14px"></i>'+
+          '</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="mbCard_deselecionarTodos()" title="Limpar seleção">'+
+            '<i data-lucide="square" style="width:14px;height:14px"></i>'+
+          '</button>'+
+          '<button class="btn btn-primary btn-sm" id="btn-lote" onclick="mbCard_gerarLote()"'+loteDisabled+' style="'+(nSel===0?'opacity:0.5;cursor:not-allowed':'')+'">'+
+            '<i data-lucide="layers" style="width:14px;height:14px"></i>'+
+            '<span id="btn-lote-txt">'+loteLabel+'</span>'+
+            '<div class="btn-spinner"></div>'+
+          '</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="ed-search-wrap" style="margin-bottom:10px">'+
+        '<span class="ed-search-icon"><i data-lucide="search" style="width:15px;height:15px"></i></span>'+
+        '<input class="ed-search" type="text" placeholder="Buscar membro..." value="'+_mbEsc(MB.cardSearch||'')+'" oninput="MB.cardSearch=this.value;_mbRenderPanel()">'+
+      '</div>'+
+      '<div class="mb-lote-grid" id="mb-lote-grid">'+itens+'</div>'+
+    '</div>';
 
-  return preview + listaHtml;
+  return '<div class="mb-card-layout">'+panelPreview+panelList+'</div>';
 }
 
 // ── Selecionar membro para preview ──────────────────────
 function mbCard_selecionarPreview(id) {
   MB.cardSelected = id;
   _mbRenderPanel();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── Seleção para lote ────────────────────────────────────
@@ -1829,31 +2215,39 @@ function mbCard_toast(label, pct, sub) {
 // ── Renderiza cartão num div temporário e captura PNG ────
 function mbCard_capturar(m, showBack) {
   return new Promise(function(resolve, reject) {
+    var SCALE  = 4;
+    var W      = 340;
+    var H      = 214;
     var container = document.getElementById('mb-pdf-render-container');
-    var wrapper   = document.createElement('div');
-    wrapper.style.cssText = 'width:340px;height:214px;position:absolute;top:0;left:0;overflow:hidden;border-radius:14px;background:#fff;font-family:Inter,sans-serif';
-    wrapper.innerHTML = showBack ? mbCard_htmlVerso(m, false) : mbCard_htmlFrente(m, false);
-    container.appendChild(wrapper);
+
+    /* Wrapper externo: tamanho final da imagem — domtoimage captura este elemento */
+    var outer = document.createElement('div');
+    outer.style.cssText = 'position:absolute;top:0;left:0;width:' + (W*SCALE) + 'px;height:' + (H*SCALE) + 'px;overflow:hidden;pointer-events:none';
+
+    /* Wrapper interno: tamanho real do card (340×214) escalado por transform.
+       Assim o texto "enxerga" 340px de largura e não sofre reflow. */
+    var inner = document.createElement('div');
+    inner.style.cssText = 'width:' + W + 'px;height:' + H + 'px;transform:scale(' + SCALE + ');transform-origin:top left;border-radius:14px;overflow:hidden;font-family:Inter,sans-serif';
+
+    inner.innerHTML = showBack ? mbCard_htmlVerso(m, false) : mbCard_htmlFrente(m, false);
+    outer.appendChild(inner);
+    container.appendChild(outer);
 
     /* Aguarda imagens carregarem */
-    var imgs = wrapper.querySelectorAll('img');
+    var imgs    = inner.querySelectorAll('img');
     var pending = imgs.length;
 
     function proceed() {
       setTimeout(function() {
-        domtoimage.toPng(wrapper, {
-          width: 340 * 4, height: 214 * 4,
-          bgcolor: '#ffffff',
-          style: {
-            transform: 'scale(4)',
-            transformOrigin: 'top left',
-            borderRadius: '14px'
-          }
+        domtoimage.toPng(outer, {
+          width:  W * SCALE,
+          height: H * SCALE,
+          bgcolor: '#ffffff'
         }).then(function(dataUrl) {
-          container.removeChild(wrapper);
+          container.removeChild(outer);
           resolve(dataUrl);
         }).catch(function(err) {
-          container.removeChild(wrapper);
+          container.removeChild(outer);
           reject(err);
         });
       }, 800);
@@ -1999,4 +2393,7 @@ function mbCard_gerarLote() {
 if (!MB.cardSelected)     MB.cardSelected     = null;
 if (!MB.cardSelecionados) MB.cardSelecionados = {};
 if (!MB.cardSearch)       MB.cardSearch       = '';
+
+// Stub: o modal real é definido em _home.html e reutilizado aqui via renderView
+function _modalTrocarSenha() { return ''; }
 </script>

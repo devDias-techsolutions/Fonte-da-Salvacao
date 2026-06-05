@@ -151,6 +151,82 @@
 .perfil-admin      { background:rgba(255,94,122,.12); color:var(--danger); border:1px solid rgba(255,94,122,.25); }
 .perfil-secretaria { background:rgba(155,124,255,0.12); color:var(--purple); border:1px solid rgba(155,124,255,.25); }
 .perfil-professor  { background:var(--teal-dim); color:var(--teal); border:1px solid var(--teal-border); }
+
+/* ── TABS ── */
+.usr-tabs-wrap {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  position: sticky; top: 64px; z-index: 90;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.usr-tabs-wrap::-webkit-scrollbar { height: 0; }
+.usr-tabs {
+  display: flex; gap: 2px; padding: 6px 16px; min-width: max-content;
+  max-width: 860px; margin: 0 auto;
+}
+.usr-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 10px;
+  border: 1px solid transparent; background: none;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 700;
+  color: var(--text-muted); cursor: pointer; transition: all .18s; white-space: nowrap;
+}
+.usr-tab:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.usr-tab.active {
+  background: var(--teal-dim); color: var(--teal);
+  border-color: var(--teal-border);
+}
+
+/* ── MATRIZ DE PERMISSÕES ── */
+.perm-card {
+  background: var(--bg-glass); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden; margin-bottom: 12px;
+}
+.perm-module-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.perm-module-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.perm-module-name  { font-size: 13px; font-weight: 800; color: var(--text); }
+.perm-module-desc  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+.perm-table { width: 100%; border-collapse: collapse; }
+.perm-table th {
+  padding: 10px 18px; font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-muted); text-align: left;
+  border-bottom: 1px solid var(--border); background: var(--bg3);
+}
+.perm-table th.col-perfil { width: 130px; }
+.perm-table td {
+  padding: 11px 18px; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text);
+}
+.perm-table tr:last-child td { border-bottom: none; }
+.perm-table tr:hover td { background: rgba(255,255,255,.015); }
+[data-theme="light"] .perm-table tr:hover td { background: rgba(0,0,0,.018); }
+
+.perm-check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px;
+}
+.perm-check.yes { background: rgba(54,211,153,.15); color: var(--success); border: 1px solid rgba(54,211,153,.3); }
+.perm-check.no  { background: rgba(255,94,122,.10); color: var(--danger);  border: 1px solid rgba(255,94,122,.2); opacity: .6; }
+.perm-check.partial { background: rgba(255,200,87,.12); color: var(--warning,#FFC857); border: 1px solid rgba(255,200,87,.3); }
+
+.perm-perfil-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px;
+}
+
+.perm-legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  padding: 12px 18px; font-size: 11px; color: var(--text-muted);
+  border-top: 1px solid var(--border); background: var(--bg3); align-items: center;
+}
+.perm-legend-item { display: flex; align-items: center; gap: 6px; }
 </style>
 
 <script>
@@ -176,6 +252,8 @@ function renderUsuarios() {
   }
 
   var isAdmin = perfil === 'admin';
+  var isSec   = perfil === 'secretaria' || isAdmin;
+  var perfilLabel = { admin: 'Admin', secretaria: 'Secretaria', professor: 'Professor' }[perfil] || perfil;
   var _thIcon = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'moon' : 'sun';
 
   renderView(
@@ -183,7 +261,7 @@ function renderUsuarios() {
     '<nav class="topnav">'+
       '<div class="topnav-logo" onclick="navigateTo(\'home\')" style="cursor:pointer">'+
         '<div class="topnav-logo-icon">'+
-          '<img src="" alt="Logo AD" class="app-logo-img">'+
+          '<img src="" alt="Logo AD" class="app-logo-img" style="width:28px;height:28px;object-fit:contain">'+
         '</div>'+
         '<div>'+
           '<div class="topnav-logo-name">AD Fonte da Salvação</div>'+
@@ -191,48 +269,119 @@ function renderUsuarios() {
         '</div>'+
       '</div>'+
       '<div class="topnav-actions">'+
-        '<button class="theme-toggle-btn btn btn-ghost btn-sm" style="width:40px;padding:0" onclick="toggleTheme()">'+
-          '<i data-lucide="'+_thIcon+'" style="width:18px;height:18px"></i>'+
-        '</button>'+
-        '<div style="position:relative">'+
-          '<button class="topnav-avatar-btn" onclick="toggleUserDropdown()" id="avatar-btn">'+
-            '<div class="avatar">'+getInitials(App.session.nome||'')+'</div>'+
+
+        /* Desktop */
+        '<div style="display:flex;align-items:center;gap:4px" class="usr-desktop-nav">'+
+          '<button class="theme-toggle-btn btn btn-ghost btn-sm" style="width:40px;padding:0" onclick="toggleTheme()">'+
+            '<i data-lucide="'+_thIcon+'" style="width:18px;height:18px"></i>'+
           '</button>'+
-          '<div class="user-dropdown" id="user-dropdown">'+
-            '<div class="user-dd-header">'+
-              '<div class="user-dd-nome">'+(App.session.nome||'')+'</div>'+
-              '<div class="user-dd-email">'+(App.session.email||'')+'</div>'+
+          /* Botão Usuários — ativo/destacado por ser a view atual */
+          '<button class="btn btn-sm" onclick="navigateTo(\'usuarios\')" '+
+            'style="display:flex;align-items:center;gap:6px;padding:0 13px;height:36px;font-size:12px;font-weight:700;'+
+            'background:var(--teal-dim);color:var(--teal);border:1.5px solid var(--teal-border);border-radius:10px">'+
+            '<i data-lucide="shield-check" style="width:14px;height:14px"></i> Usuários'+
+          '</button>'+
+          '<div style="position:relative">'+
+            '<button class="topnav-avatar-btn" onclick="toggleUserDropdown()" id="avatar-btn">'+
+              '<div class="avatar">'+getInitials(App.session.nome||'')+'</div>'+
+            '</button>'+
+            '<div class="user-dropdown" id="user-dropdown">'+
+              '<div class="user-dd-header">'+
+                '<div class="user-dd-nome">'+(App.session.nome||'')+'</div>'+
+                '<div class="user-dd-email">'+(App.session.email||'')+'</div>'+
+                '<div style="margin-top:8px"><span class="badge badge-teal">'+perfilLabel+'</span></div>'+
+              '</div>'+
+              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
+                '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
+              '</button>'+
+              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'escola-dominical\')">'+
+                '<i data-lucide="graduation-cap" style="width:15px;height:15px"></i> Escola Dominical'+
+              '</button>'+
+              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'membros\')">'+
+                '<i data-lucide="contact" style="width:15px;height:15px"></i> Membros'+
+              '</button>'+
+              '<button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">'+
+                '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
+              '</button>'+
+              '<hr class="divider" style="margin:6px 0">'+
+              '<button class="user-dd-item danger" onclick="handleLogout()">'+
+                '<i data-lucide="log-out" style="width:15px;height:15px"></i> Sair'+
+              '</button>'+
             '</div>'+
-            '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
+          '</div>'+
+        '</div>'+
+
+        /* Mobile cfg */
+        '<div class="usr-mob-cfg-wrap">'+
+          '<button class="btn btn-ghost btn-sm" style="width:38px;padding:0" onclick="usrToggleMobCfg(event)" title="Menu">'+
+            '<i data-lucide="settings-2" style="width:17px;height:17px"></i>'+
+          '</button>'+
+          '<div class="usr-mob-cfg-dd" id="usr-mob-cfg-dd">'+
+            '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);padding:6px 13px 2px">Conta</div>'+
+            '<div style="display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:9px">'+
+              '<div class="avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0">'+getInitials(App.session.nome||'?')+'</div>'+
+              '<div style="min-width:0">'+
+                '<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(App.session.nome||'')+'</div>'+
+                '<div style="font-size:10px;color:var(--text-muted)">'+(App.session.email||'')+'</div>'+
+              '</div>'+
+            '</div>'+
+            '<div class="divider" style="height:1px;background:var(--border);margin:4px 0"></div>'+
+            '<button onclick="usrToggleMobCfg();toggleTheme()">'+
+              '<i data-lucide="'+_thIcon+'" style="width:15px;height:15px"></i> Alternar tema'+
+            '</button>'+
+            '<div class="divider" style="height:1px;background:var(--border);margin:4px 0"></div>'+
+            '<button onclick="usrToggleMobCfg();navigateTo(\'home\')">'+
               '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
             '</button>'+
-            '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'escola-dominical\')">'+
+            '<button onclick="usrToggleMobCfg();navigateTo(\'escola-dominical\')">'+
               '<i data-lucide="graduation-cap" style="width:15px;height:15px"></i> Escola Dominical'+
             '</button>'+
-            '<hr class="divider" style="margin:6px 0">'+
-            '<button class="user-dd-item danger" onclick="handleLogout()">'+
+            '<button onclick="usrToggleMobCfg();navigateTo(\'membros\')">'+
+              '<i data-lucide="contact" style="width:15px;height:15px"></i> Membros'+
+            '</button>'+
+            '<div class="divider" style="height:1px;background:var(--border);margin:4px 0"></div>'+
+            '<button onclick="usrToggleMobCfg();showTrocarSenha()">'+
+              '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
+            '</button>'+
+            '<div class="divider" style="height:1px;background:var(--border);margin:4px 0"></div>'+
+            '<button onclick="handleLogout()" style="color:var(--danger)">'+
               '<i data-lucide="log-out" style="width:15px;height:15px"></i> Sair'+
             '</button>'+
           '</div>'+
         '</div>'+
+
       '</div>'+
     '</nav>'+
 
-    /* ── HERO ── */
-    '<div class="usr-hero">'+
-      '<div class="usr-hero-top">'+
-        '<button class="usr-hero-back" onclick="navigateTo(\'home\')">'+
-          '<i data-lucide="arrow-left" style="width:18px;height:18px"></i>'+
+    /* ── BREADCRUMB BAR ── */
+    '<div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:36px;display:flex;align-items:center;gap:0">'+
+      '<button style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid transparent;color:var(--text-muted);cursor:pointer;background:transparent;margin-right:8px;transition:all .2s" onclick="navigateTo(\'home\')" title="Voltar">'+
+        '<i data-lucide="arrow-left" style="width:14px;height:14px"></i>'+
+      '</button>'+
+      '<span style="font-size:11.5px;color:var(--text-muted);font-weight:500;cursor:pointer" onclick="navigateTo(\'home\')">Gestão Ministerial</span>'+
+      '<span style="font-size:11px;color:var(--border-strong);margin:0 6px">/</span>'+
+      '<span style="font-size:12px;font-weight:700;color:var(--teal)">Usuários</span>'+
+      '<div style="display:flex;align-items:center;gap:4px;margin-left:10px">'+
+        '<span style="font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;opacity:.75">Acesso</span>'+
+        '<span style="font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;opacity:.75">Permissões</span>'+
+      '</div>'+
+    '</div>'+
+
+    /* ── TABS ── */
+    '<div class="usr-tabs-wrap">'+
+      '<div class="usr-tabs">'+
+        '<button class="usr-tab active" id="usr-tab-usuarios" onclick="usrSetTab(\'usuarios\')">'+
+          '<i data-lucide="users" style="width:14px;height:14px"></i> Usuários'+
         '</button>'+
-        '<div>'+
-          '<div class="usr-hero-title">Usuários</div>'+
-          '<div class="usr-hero-sub">Gestão de Acesso e Perfis</div>'+
-        '</div>'+
+        (isAdmin ?
+        '<button class="usr-tab" id="usr-tab-permissoes" onclick="usrSetTab(\'permissoes\')">'+
+          '<i data-lucide="shield" style="width:14px;height:14px"></i> Permissões'+
+        '</button>' : '')+
       '</div>'+
     '</div>'+
 
     /* ── CONTENT ── */
-    '<div class="usr-content">'+
+    '<div class="usr-content" id="usr-content">'+
 
       /* Header */
       '<div class="usr-section-header">'+
@@ -274,11 +423,11 @@ function renderUsuarios() {
       '<button class="usr-bnav-item" onclick="navigateTo(\'escola-dominical\')">'+
         '<i data-lucide="graduation-cap" style="width:20px;height:20px"></i><span>E. Dom.</span>'+
       '</button>'+
-      '<button class="usr-bnav-item active">'+
-        '<i data-lucide="users" style="width:20px;height:20px"></i><span>Usuários</span>'+
+      '<button class="usr-bnav-item" onclick="navigateTo(\'membros\')">'+
+        '<i data-lucide="contact" style="width:20px;height:20px"></i><span>Membros</span>'+
       '</button>'+
-      '<button class="usr-bnav-item" onclick="handleLogout()">'+
-        '<i data-lucide="log-out" style="width:20px;height:20px"></i><span>Sair</span>'+
+      '<button class="usr-bnav-item active">'+
+        '<i data-lucide="shield-check" style="width:20px;height:20px"></i><span>Usuários</span>'+
       '</button>'+
     '</nav>'+
 
@@ -291,6 +440,7 @@ function renderUsuarios() {
   setTimeout(function() {
     if (window.lucide) lucide.createIcons();
     applyLogoSrc();
+    _usrCurrentTab = 'usuarios';
     _usrCarregar();
   }, 0);
 }
@@ -650,7 +800,181 @@ function usrTogglePwd(inputId, btn) {
   if (window.lucide) lucide.createIcons();
 }
 
-// Fechar dropdown ao clicar fora (reusa mesma lógica do home)
+// ── TABS ──────────────────────────────────────────────────
+var _usrCurrentTab = 'usuarios';
+
+function usrSetTab(tab) {
+  _usrCurrentTab = tab;
+  document.querySelectorAll('.usr-tab').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('usr-tab-' + tab);
+  if (btn) btn.classList.add('active');
+
+  var content = document.getElementById('usr-content');
+  if (!content) return;
+
+  if (tab === 'usuarios') {
+    content.innerHTML =
+      '<div class="usr-section-header">'+
+        '<div id="usr-count" style="font-size:13px;color:var(--text-muted)">'+UsrState.usuarios.length+' usuário(s)</div>'+
+        (App.session.perfil === 'admin' ?
+          '<button class="btn btn-primary btn-sm" onclick="usrOpenModalNovoUsuario()">'+
+            '<i data-lucide="user-plus" style="width:15px;height:15px"></i> Novo Usuário'+
+          '</button>' : '')+
+      '</div>'+
+      '<div class="usr-search-wrap">'+
+        '<div class="usr-search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></div>'+
+        '<input type="text" class="usr-search" id="usr-busca" placeholder="Buscar por nome ou e-mail…" oninput="usrSetBusca(this.value)" value="'+_usrEsc(UsrState.busca||'')+'">'+
+      '</div>'+
+      '<div class="usr-filter-row">'+
+        ['todos','admin','secretaria','professor','inativos'].map(function(f){
+          var a = UsrState.filtro===f?' active':'';
+          return '<button class="usr-filter-btn'+a+'" id="ufbtn-'+f+'" onclick="usrSetFiltro(\''+f+'\')">'+f.charAt(0).toUpperCase()+f.slice(1)+'</button>';
+        }).join('')+
+      '</div>'+
+      '<div class="usr-list" id="usr-list"></div>';
+    if (window.lucide) lucide.createIcons();
+    _usrRenderLista();
+
+  } else if (tab === 'permissoes') {
+    usrRenderPermissoes();
+  }
+}
+
+// ── MATRIZ DE PERMISSÕES ──────────────────────────────────
+function usrRenderPermissoes() {
+  var content = document.getElementById('usr-content');
+  if (!content) return;
+
+  function checkCell(val) {
+    if (val === true)    return '<span class="perm-check yes"><i data-lucide="check" style="width:13px;height:13px;stroke-width:2.5"></i></span>';
+    if (val === false)   return '<span class="perm-check no"><i data-lucide="x" style="width:12px;height:12px;stroke-width:2.5"></i></span>';
+    if (val === 'partial') return '<span class="perm-check partial"><i data-lucide="minus" style="width:12px;height:12px;stroke-width:2.5"></i></span>';
+    return '';
+  }
+
+  var perfilBadges = {
+    admin:      '<span class="perm-perfil-badge perfil-admin"><i data-lucide="shield-alert" style="width:12px;height:12px"></i> Admin</span>',
+    secretaria: '<span class="perm-perfil-badge perfil-secretaria"><i data-lucide="briefcase" style="width:12px;height:12px"></i> Secretaria</span>',
+    professor:  '<span class="perm-perfil-badge perfil-professor"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> Professor</span>'
+  };
+
+  // Cada módulo: { name, desc, icon, iconBg, acao: [{ label, admin, secretaria, professor }] }
+  var modulos = [
+    {
+      name: 'Dashboard / Home', desc: 'Visão geral da plataforma', icon: 'layout-dashboard', iconBg: 'rgba(0,217,198,.15)', iconColor: 'var(--teal)',
+      acoes: [
+        { label: 'Acessar dashboard',          admin: true,  secretaria: true,  professor: true  },
+        { label: 'Ver todos os módulos',       admin: true,  secretaria: true,  professor: false }
+      ]
+    },
+    {
+      name: 'Escola Dominical', desc: 'Classes, alunos, chamadas', icon: 'graduation-cap', iconBg: 'rgba(155,124,255,.15)', iconColor: 'var(--purple,#9b7cff)',
+      acoes: [
+        { label: 'Ver classes',                admin: true,  secretaria: true,  professor: true  },
+        { label: 'Criar / editar classes',     admin: true,  secretaria: true,  professor: false },
+        { label: 'Excluir classes',            admin: true,  secretaria: false, professor: false },
+        { label: 'Gerenciar alunos',           admin: true,  secretaria: true,  professor: true  },
+        { label: 'Promover / regrediar alunos',admin: true,  secretaria: true,  professor: false },
+        { label: 'Registrar chamada',          admin: true,  secretaria: true,  professor: true  },
+        { label: 'Ver histórico de chamadas',  admin: true,  secretaria: true,  professor: 'partial' },
+        { label: 'Configurar alertas de email',admin: true,  secretaria: true,  professor: false }
+      ]
+    },
+    {
+      name: 'Membros', desc: 'Cadastro e rol de membros', icon: 'contact', iconBg: 'rgba(77,163,255,.15)', iconColor: 'var(--cyan,#4da3ff)',
+      acoes: [
+        { label: 'Ver lista de membros',       admin: true,  secretaria: true,  professor: false },
+        { label: 'Cadastrar membro',           admin: true,  secretaria: true,  professor: false },
+        { label: 'Editar dados do membro',     admin: true,  secretaria: true,  professor: false },
+        { label: 'Excluir membro',             admin: true,  secretaria: false, professor: false },
+        { label: 'Exportar / importar backup', admin: true,  secretaria: true,  professor: false }
+      ]
+    },
+    {
+      name: 'Usuários', desc: 'Gestão de acesso e perfis', icon: 'shield-check', iconBg: 'rgba(255,94,122,.15)', iconColor: 'var(--danger,#ff5e7a)',
+      acoes: [
+        { label: 'Acessar módulo',             admin: true,  secretaria: true,  professor: false },
+        { label: 'Criar usuário',              admin: true,  secretaria: false, professor: false },
+        { label: 'Editar usuário (nome/perfil)',admin: true,  secretaria: false, professor: false },
+        { label: 'Resetar senha de outro',     admin: true,  secretaria: false, professor: false },
+        { label: 'Ativar / desativar usuário', admin: true,  secretaria: false, professor: false },
+        { label: 'Ver matriz de permissões',   admin: true,  secretaria: false, professor: false }
+      ]
+    },
+    {
+      name: 'Conta própria', desc: 'Ações sobre o próprio perfil', icon: 'user-cog', iconBg: 'rgba(54,211,153,.15)', iconColor: 'var(--success,#36d399)',
+      acoes: [
+        { label: 'Alterar própria senha',      admin: true,  secretaria: true,  professor: true  },
+        { label: 'Ver dados da própria conta', admin: true,  secretaria: true,  professor: true  }
+      ]
+    }
+  ];
+
+  var html =
+    '<div style="margin-bottom:16px">'+
+      '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">Matriz de Permissões</div>'+
+      '<div style="font-size:12px;color:var(--text-muted)">Controle de acesso por perfil em cada módulo da plataforma</div>'+
+    '</div>';
+
+  modulos.forEach(function(mod) {
+    html +=
+      '<div class="perm-card">'+
+        '<div class="perm-module-header">'+
+          '<div class="perm-module-icon" style="background:'+mod.iconBg+'">'+
+            '<i data-lucide="'+mod.icon+'" style="width:16px;height:16px;color:'+mod.iconColor+'"></i>'+
+          '</div>'+
+          '<div>'+
+            '<div class="perm-module-name">'+mod.name+'</div>'+
+            '<div class="perm-module-desc">'+mod.desc+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<table class="perm-table">'+
+          '<thead><tr>'+
+            '<th>Ação</th>'+
+            '<th class="col-perfil">'+perfilBadges.admin+'</th>'+
+            '<th class="col-perfil">'+perfilBadges.secretaria+'</th>'+
+            '<th class="col-perfil">'+perfilBadges.professor+'</th>'+
+          '</tr></thead>'+
+          '<tbody>'+
+          mod.acoes.map(function(a) {
+            return '<tr>'+
+              '<td>'+a.label+'</td>'+
+              '<td>'+checkCell(a.admin)+'</td>'+
+              '<td>'+checkCell(a.secretaria)+'</td>'+
+              '<td>'+checkCell(a.professor)+'</td>'+
+            '</tr>';
+          }).join('')+
+          '</tbody>'+
+        '</table>'+
+        '<div class="perm-legend">'+
+          '<span class="perm-legend-item">'+checkCell(true)+' Permitido</span>'+
+          '<span class="perm-legend-item">'+checkCell('partial')+' Parcial (própria classe)</span>'+
+          '<span class="perm-legend-item">'+checkCell(false)+' Sem acesso</span>'+
+        '</div>'+
+      '</div>';
+  });
+
+  content.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+}
+
+// ── MENU MOBILE ───────────────────────────────────────────
+function usrToggleMobCfg(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('usr-mob-cfg-dd');
+  if (!dd) return;
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    document.addEventListener('click', function _closeMob(ev) {
+      if (!dd.contains(ev.target)) {
+        dd.classList.remove('open');
+        document.removeEventListener('click', _closeMob);
+      }
+    });
+  }
+}
+
+// Fechar dropdown ao clicar fora
 document.addEventListener('click', function(e) {
   var dd  = document.getElementById('user-dropdown');
   var btn = document.getElementById('avatar-btn');
@@ -659,3 +983,29 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+
+<style>
+/* ── Desktop vs Mobile nav ── */
+.usr-desktop-nav { display: flex !important; }
+.usr-mob-cfg-wrap { display: none !important; }
+@media (max-width: 639px) {
+  .usr-desktop-nav { display: none !important; }
+  .usr-mob-cfg-wrap { display: flex !important; position: relative; }
+}
+.usr-mob-cfg-dd {
+  position: fixed; right: 12px; top: 56px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 14px; padding: 7px; z-index: 9998;
+  min-width: 210px; display: none; flex-direction: column; gap: 2px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.32);
+}
+.usr-mob-cfg-dd.open { display: flex; }
+.usr-mob-cfg-dd button {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 13px; border-radius: 9px; border: none; background: none;
+  cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--text); text-align: left; width: 100%; transition: background .15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.usr-mob-cfg-dd button:hover { background: var(--bg4); }
+</style>

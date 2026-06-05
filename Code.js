@@ -22,6 +22,7 @@ var PERFIS = {
   SECRETARIA: 'secretaria',
   PROFESSOR:  'professor'
 };
+var MEMBROS_FOTO_FOLDER_ID = '1qiHp44yRdnLPjYryt5EuH5SauD67K_k0';
 
 // ── SS: inicialização LAZY (evita crash global) ──────────────
 var _SS = null;
@@ -229,4 +230,18 @@ function deletarMembro(token, id) {
     var r = Membros.deletarMembro(token, id);
     return JSON.parse(JSON.stringify(r || { success: false, error: 'Resposta vazia.' }));
   } catch(e) { return { success: false, error: e.message }; }
+}
+
+function _forcarEscopoDrive() {
+  // Força o GAS a solicitar o escopo drive na próxima autorização
+  var folder = DriveApp.getRootFolder();
+  Logger.log('Drive OK: ' + folder.getName());
+}
+
+function _pingDriveWrite() {
+  var folder = DriveApp.getRootFolder();
+  // Testa escrita real: cria e apaga arquivo de teste
+  var f = folder.createFile('_ping_test.txt', 'ok', MimeType.PLAIN_TEXT);
+  f.setTrashed(true);
+  Logger.log('Escrita no Drive OK');
 }

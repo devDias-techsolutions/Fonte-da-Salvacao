@@ -59,6 +59,8 @@
 .topnav-name { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.4px; line-height: 1.15; }
 .topnav-sub { font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; letter-spacing: .6px; text-transform: uppercase; }
 .topnav-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; margin: 0 4px; }
+.home-usr-label { display: inline; }
+@media (max-width: 860px) { .home-usr-label { display: none; } }
 
 .topnav-icon-btn {
   width: 36px; height: 36px; border-radius: 10px; background: transparent; border: 1px solid transparent;
@@ -337,6 +339,10 @@ function renderHome() {
             '<i data-lucide=\"moon\" style=\"width:17px;height:17px\"></i>' +
           '</button>' +
           '<div class=\"topnav-sep\"></div>' +
+          (isSec ? '<button class=\"topnav-icon-btn\" onclick=\"navigateTo(\'usuarios\')\" title=\"Gerenciar Usuários\" style=\"display:flex;align-items:center;gap:5px;padding:0 10px;font-size:12px;font-weight:700;color:var(--text-muted)\">' +
+            '<i data-lucide=\"shield-check\" style=\"width:16px;height:16px;color:var(--teal)\"></i>' +
+            '<span class=\"home-usr-label\">Usuários</span>' +
+          '</button>' : '') +
           '<div class=\"topnav-avatar-wrap\">' +
             '<button class=\"topnav-avatar-btn\" onclick=\"toggleUserDropdown()\" id=\"avatar-btn\" title=\"' + nome + '\">' +
               '<div class=\"avatar\" style=\"width:34px;height:34px;font-size:12px\">' + getInitials(nome) + '</div>' +
@@ -352,9 +358,6 @@ function renderHome() {
               '<button class=\"user-dd-item\" onclick=\"closeDropdown(); navigateTo(\'home\')\">' +
                 '<i data-lucide=\"layout-dashboard\" style=\"width:15px;height:15px\"></i> Dashboard' +
               '</button>' +
-              (isSec ? '<button class=\"user-dd-item\" onclick=\"closeDropdown(); navigateTo(\'usuarios\')\">' +
-                '<i data-lucide=\"users\" style=\"width:15px;height:15px\"></i> Usuários' +
-              '</button>' : '') +
               '<button class=\"user-dd-item\" onclick=\"closeDropdown(); showTrocarSenha()\">' +
                 '<i data-lucide=\"key\" style=\"width:15px;height:15px\"></i> Alterar senha' +
               '</button>' +
@@ -391,9 +394,7 @@ function renderHome() {
             '<button onclick=\"homeToggleNavCfg();navigateTo(\'home\')\">' +
               '<i data-lucide=\"layout-dashboard\" style=\"width:15px;height:15px\"></i> Dashboard' +
             '</button>' +
-            (isSec ? '<button onclick=\"homeToggleNavCfg();navigateTo(\'usuarios\')\">' +
-              '<i data-lucide=\"users\" style=\"width:15px;height:15px\"></i> Usuários' +
-            '</button>' : '') +
+            (isSec ? '<button onclick=\"homeToggleNavCfg();navigateTo(\'usuarios\')\"><i data-lucide=\"shield-check\" style=\"width:15px;height:15px;color:var(--teal)\"></i> Usuários</button>' : '') +
             '<button onclick=\"homeToggleNavCfg();showTrocarSenha()\">' +
               '<i data-lucide=\"key\" style=\"width:15px;height:15px\"></i> Alterar senha' +
             '</button>' +
@@ -433,7 +434,6 @@ function renderHome() {
       '<div class=\"section-label\">Módulos</div>' +
       '<div class=\"modules-grid\">' +
         _moduleBtn('graduation-cap', 'Escola Dominical', 'Classes, alunos e chamadas', 'escola-dominical', false) +
-        _moduleBtn('users',          'Usuários',         'Gestão de acesso e perfis',  isSec ? 'usuarios' : null, !isSec) +
         _moduleBtn('contact',        'Membros',          'Cadastro de membros',         'membros', false, '') +
         _moduleBtn('wallet',         'Financeiro',       'Tesouraria e relatórios',     null, true, 'Em breve') +
         _moduleBtn('calendar-days',  'Agenda',           'Eventos e escalas',           null, true, 'Em breve') +
@@ -482,10 +482,6 @@ function renderHome() {
         '<i data-lucide=\"contact\" style=\"width:20px;height:20px\"></i>' +
         '<span>Membros</span>' +
       '</button>' +
-      (isSec ? '<button class=\"bnav-item\" onclick=\"navigateTo(\'usuarios\')\">' +
-        '<i data-lucide=\"users\" style=\"width:20px;height:20px\"></i>' +
-        '<span>Usuários</span>' +
-      '</button>' : '') +
       '<button class=\"bnav-item\" onclick=\"handleLogout()\">' +
         '<i data-lucide=\"log-out\" style=\"width:20px;height:20px\"></i>' +
         '<span>Sair</span>' +

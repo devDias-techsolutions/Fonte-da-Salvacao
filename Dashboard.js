@@ -9,12 +9,13 @@ var Dashboard = (function () {
     try {
       Auth._auth(token);
 
+      var membros     = Util.sheetToObjects('Membros').filter(function(r)     { return r.ativo === true || r.ativo === 1 || String(r.ativo).trim().toUpperCase() === 'TRUE'; });
       var alunos      = Util.sheetToObjects('Alunos').filter(function(r)      { return r.Ativo === true || r.Ativo === 'TRUE'; });
       var professores = Util.sheetToObjects('Professores').filter(function(r) { return r.Ativo === true || r.Ativo === 'TRUE'; });
       var turmas      = Util.sheetToObjects('Classes').filter(function(r)     { return r.Ativo === true || r.Ativo === 'TRUE'; });
 
       return Util.ok({
-        membros:     0,            // Módulo de membros será implementado na Fase 5
+        membros:     membros.length,
         alunos:      alunos.length,
         professores: professores.length,
         turmas:      turmas.length

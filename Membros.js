@@ -66,12 +66,40 @@ var Membros = (function () {
     return String(max + 1).padStart(4, '0');
   }
 
+  // ── FORMATAR DATA: Date object ou ISO string → dd/mm/aaaa ──────────
+  // O Google Sheets às vezes retorna objetos Date para colunas de data.
+  // Esta função normaliza qualquer representação para dd/mm/aaaa.
+  function _formatarData(val) {
+    if (!val && val !== 0) return '';
+    // Já está no formato dd/mm/aaaa
+    if (typeof val === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(val.trim())) return val.trim();
+    // É um objeto Date (Sheets retorna Date para células formatadas como data)
+    if (val instanceof Date) {
+      var d = val.getDate();
+      var m = val.getMonth() + 1;
+      var y = val.getFullYear();
+      if (isNaN(d) || isNaN(m) || isNaN(y) || y < 1900) return '';
+      return (d < 10 ? '0'+d : d) + '/' + (m < 10 ? '0'+m : m) + '/' + y;
+    }
+    // É uma string ISO (ex: "2004-02-08T02:00:00.000Z") ou "aaaa-mm-dd"
+    var s = String(val).trim();
+    var isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return isoMatch[3] + '/' + isoMatch[2] + '/' + isoMatch[1];
+    }
+    return s; // devolve como está se não reconheceu
+  }
+
   // ══ LISTAR ══════════════════════════════════════════════
   function listarMembros(token) {
     try {
       Auth._auth(token);
+      var CAMPOS_DATA = ['nascimento', 'batismo'];
       var rows = _safeRows().map(function (r) {
         r.ativo = _isAtivo(r.ativo);
+        CAMPOS_DATA.forEach(function(campo) {
+          if (r[campo] !== undefined) r[campo] = _formatarData(r[campo]);
+        });
         return r;
       });
       return Util.ok(_strip(rows));
@@ -97,6 +125,12 @@ var Membros = (function () {
 
       // Garante ID seguro (string UUID) — nunca float, nunca vazio
       dados.id = _idSeguro(dados.id);
+
+      // Normaliza campos de data para dd/mm/aaaa antes de gravar
+      var CAMPOS_DATA = ['nascimento', 'batismo'];
+      CAMPOS_DATA.forEach(function(campo) {
+        if (dados[campo] !== undefined) dados[campo] = _formatarData(dados[campo]);
+      });
 
       var sh   = Util.getSheet(SHEET);
       var data = sh.getDataRange().getValues();
@@ -215,11 +249,109 @@ var Membros = (function () {
     } catch (e) { return Util.err(e.message); }
   }
 
+  // ══ SALVAR FOTO NO DRIVE ════════════════════════════════
+  // Recebe: token, membroId (string), base64Data (string sem prefixo data:...),
+  //         mimeType (ex: 'image/jpeg'), nomeArquivo (ex: 'foto.jpg')
+  // Salva na pasta FOTOS_MEMBROS_FOLDER_ID (crie a constante no Code.gs ou
+  // defina abaixo). Retorna a URL de visualização pública do arquivo.
+  // A pasta deve ter permissão "qualquer um com o link pode ver" para exibição.
+ // ══ SALVAR FOTO NO DRIVE ════════════════════════════════
+  function salvarFotoMembro(token, membroId, base64Data, mimeType, nomeArquivo) {
+    try {
+      Auth._auth(token);
+
+      // ── Garante que o DriveApp está acessível (escopo drive) ────────
+      // Se o projeto não tiver o escopo, esta linha vai lançar o erro
+      // antes de tentar getFolderById, gerando mensagem mais clara.
+      try {
+        DriveApp.getRootFolder(); // força verificação de escopo
+      } catch (scopeErr) {
+        throw new Error(
+          'Sem permissao para acessar o Drive. Adicione o escopo ' +
+          '"https://www.googleapis.com/auth/drive" no appsscript.json ' +
+          'e reimplante o Web App. Detalhe: ' + scopeErr.message
+        );
+      }
+
+      // ── ID da pasta no Drive para fotos de membros ──────────────────
+      var folderId = (typeof MEMBROS_FOTO_FOLDER_ID !== 'undefined' && MEMBROS_FOTO_FOLDER_ID)
+        ? String(MEMBROS_FOTO_FOLDER_ID).trim()
+        : '';
+
+      var folder;
+      if (folderId) {
+        try {
+          folder = DriveApp.getFolderById(folderId);
+        } catch (fe) {
+          throw new Error(
+            'Pasta de fotos nao encontrada (ID: "' + folderId + '"). ' +
+            'Verifique se o ID esta correto e se o Web App tem permissao ' +
+            'de acesso a essa pasta. Detalhe: ' + fe.message
+          );
+        }
+      } else {
+        // Fallback: cria/usa subpasta "Fotos Membros AD" na raiz do Drive
+        var rootFolders = DriveApp.getFoldersByName('Fotos Membros AD');
+        folder = rootFolders.hasNext() ? rootFolders.next() : DriveApp.createFolder('Fotos Membros AD');
+      }
+
+      // Remove arquivos antigos do mesmo membro (evita acúmulo)
+      var prefixo = 'foto_' + String(membroId);
+      var exts = ['.jpg', '.jpeg', '.png', '.webp'];
+      for (var ei = 0; ei < exts.length; ei++) {
+        var existentes = folder.getFilesByName(prefixo + exts[ei]);
+        while (existentes.hasNext()) { existentes.next().setTrashed(true); }
+      }
+
+      // Decodifica base64 e cria o arquivo
+      var bytes = Utilities.base64Decode(base64Data);
+      var blob  = Utilities.newBlob(bytes, mimeType || 'image/jpeg', nomeArquivo || (prefixo + '.jpg'));
+      var file  = folder.createFile(blob);
+
+      // Torna público (leitura) para exibir na web app
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      var fileId = file.getId();
+
+      // Retorna base64 diretamente para evitar CORS no GAS HtmlService.
+      // O frontend usa 'data:<mimeType>;base64,<b64>' como src da imagem.
+      var b64  = Utilities.base64Encode(bytes);
+      var mime = mimeType || 'image/jpeg';
+
+      return Util.ok({ fileId: fileId, base64: b64, mimeType: mime });
+
+    } catch (e) {
+      Logger.log('[Membros] salvarFotoMembro: ' + e);
+      return Util.err(e.message);
+    }
+  }
+
+  // ══ LER FOTO DO DRIVE COMO BASE64 ═══════════════════════
+  // Recebe: token, fileId (string — o ID retornado por salvarFotoMembro)
+  // Retorna: { base64: string, mimeType: string }
+  // O frontend monta: 'data:' + mimeType + ';base64,' + base64
+  function getFotoMembro(token, fileId) {
+    try {
+      Auth._auth(token);
+      if (!fileId) return Util.err('fileId nao informado.');
+      var file = DriveApp.getFileById(String(fileId).trim());
+      var blob = file.getBlob();
+      var b64  = Utilities.base64Encode(blob.getBytes());
+      var mime = blob.getContentType() || 'image/jpeg';
+      return Util.ok({ base64: b64, mimeType: mime });
+    } catch (e) {
+      Logger.log('[Membros] getFotoMembro: ' + e);
+      return Util.err(e.message);
+    }
+  }
+
   return {
     listarMembros:        listarMembros,
     getProximoRol:        getProximoRol,
     salvarMembro:         salvarMembro,
     deletarMembro:        deletarMembro,
+    salvarFotoMembro:     salvarFotoMembro,
+    getFotoMembro:        getFotoMembro,
     corrigirIdsDuplicados: corrigirIdsDuplicados,
     setupMembros:         setupMembros
   };
@@ -248,6 +380,13 @@ function mb_getProximoRol(token)        { return _safe_mb(function(){ return Mem
 function mb_salvarMembro(token, membro) { return _safe_mb(function(){ return Membros.salvarMembro(token, membro); }); }
 function mb_deletarMembro(token, id)    { return _safe_mb(function(){ return Membros.deletarMembro(token, id); }); }
 function mb_setupMembros(token)         { return _safe_mb(function(){ return Membros.setupMembros(token); }); }
+function mb_salvarFotoMembro(token, membroId, base64Data, mimeType, nomeArquivo) {
+  return _safe_mb(function(){ return Membros.salvarFotoMembro(token, membroId, base64Data, mimeType, nomeArquivo); });
+}
+
+function mb_getFotoMembro(token, fileId) {
+  return _safe_mb(function(){ return Membros.getFotoMembro(token, fileId); });
+}
 
 /**
  * UTILITÁRIO DE SANEAMENTO — execute UMA VEZ pelo editor do GAS.

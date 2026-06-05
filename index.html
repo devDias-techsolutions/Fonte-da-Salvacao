@@ -808,15 +808,15 @@ var VIEWS = {
   'primeiro-acesso': 'renderPrimeiroAcesso',
   'recuperar-senha': 'renderRecuperarSenha',
   home:              'renderHome',
-  usuarios:          'renderUsuarios',
   'escola-dominical':'renderEscolaDominical',
-  'membros':         'renderMembros'
+  'membros':         'renderMembros',
+  'usuarios':        'renderUsuarios'
 };
 
 function navigateTo(view, params) {
   App.currentView = view;
 
-  var authRequired = ['home', 'usuarios', 'escola-dominical', 'membros'];
+  var authRequired = ['home', 'escola-dominical', 'membros', 'usuarios'];
   if (authRequired.indexOf(view) !== -1 && !App.session) {
     navigateTo('login');
     return;
@@ -1080,6 +1080,7 @@ if (document.readyState === 'loading') {
 <?!= include('_home'); ?>
 <?!= include('_escola-dominical'); ?>
 <?!= include('_membros'); ?>
+<?!= include('_usuarios'); ?>
 
 </body>
 </html>

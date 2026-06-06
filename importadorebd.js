@@ -1,3 +1,4 @@
+
 // ═══════════════════════════════════════════════════════════
 //  ImportadorEBD.gs — Funções de importação em lote
 //  Adicione este arquivo ao projeto GAS da Escola Dominical

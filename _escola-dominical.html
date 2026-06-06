@@ -191,6 +191,145 @@
 
 
 
+/* ══ MODAL IMPORTADOR EBD ══════════════════════════════════ */
+#modal-importador .modal-box {
+  max-width: 720px; max-height: 88vh; overflow-y: auto; padding: 0;
+}
+.imp-modal-inner { padding: 24px 28px 28px; }
+
+/* Steps do importador */
+.imp-steps {
+  display: flex; gap: 0; margin-bottom: 22px;
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; background: var(--bg2);
+}
+.imp-step {
+  flex: 1; padding: 10px 10px; display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  border-right: 1px solid var(--border); cursor: default; transition: all 0.2s;
+}
+.imp-step:last-child { border-right: none; }
+.imp-step.active { color: var(--accent); background: rgba(0,169,156,0.08); }
+.imp-step.done   { color: #34d399; }
+.imp-step-num {
+  width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; flex-shrink: 0; font-family: 'DM Mono', monospace;
+}
+.imp-step.done .imp-step-num { background: #34d399; border-color: #34d399; color: #000; }
+@media(max-width:480px){ .imp-step span.imp-step-lbl { display:none; } }
+
+/* Danger zone */
+.imp-danger-zone {
+  background: rgba(255,94,122,0.06); border: 1.5px solid rgba(255,94,122,0.22);
+  border-radius: 10px; padding: 16px 18px; margin-bottom: 18px;
+}
+.imp-danger-title {
+  font-size: 11px; font-weight: 800; color: #ff5e7a;
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 7px; margin-bottom: 8px;
+}
+.imp-danger-body { font-size: 11px; color: var(--text-muted); line-height: 1.65; margin-bottom: 12px; }
+.imp-danger-body ul { margin: 5px 0 0 14px; }
+.imp-confirm-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.imp-confirm-row input[type="text"] {
+  flex: 1; min-width: 160px; height: 36px;
+  background: var(--bg3, #1a1e28); border: 1.5px solid rgba(255,94,122,0.28);
+  border-radius: 8px; color: var(--text); font-size: 12px;
+  padding: 0 12px; font-family: inherit; outline: none;
+}
+.imp-confirm-row input:focus { border-color: #ff5e7a; }
+
+/* Cards internos */
+.imp-card { background: var(--surface2,#181e2a); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+.imp-card-title {
+  font-size: 11px; font-weight: 800; color: var(--text);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+}
+.imp-card-title::before { content:''; width:3px; height:14px; background:var(--accent); border-radius:2px; flex-shrink:0; }
+
+/* Dropzone */
+.imp-dropzone {
+  border: 2px dashed var(--border); border-radius: 10px;
+  padding: 36px 20px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: var(--bg3,#1a1e28); position: relative;
+}
+.imp-dropzone:hover, .imp-dropzone.drag { border-color: var(--accent); background: rgba(0,169,156,0.07); }
+.imp-dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.imp-dropzone.dz-ok { border-color: #34d399; background: rgba(52,211,153,0.07); }
+
+/* Preview table */
+.imp-preview-wrap { overflow-x: auto; max-height: 260px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border); }
+.imp-preview-table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'DM Mono', monospace; }
+.imp-preview-table th {
+  position: sticky; top: 0; background: var(--bg3,#1a1e28);
+  padding: 7px 9px; text-align: left; font-size: 9px;
+  color: var(--text-muted); border-bottom: 1px solid var(--border);
+  white-space: nowrap; z-index: 1;
+}
+.imp-preview-table td { padding: 5px 9px; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; }
+.imp-preview-table tr:hover td { background: rgba(255,255,255,0.02); }
+.imp-row-aluno { border-left: 2px solid var(--accent); }
+.imp-row-prof  { border-left: 2px solid #f0b429; }
+.imp-row-skip  { border-left: 2px solid #ff5e7a; opacity: 0.5; }
+.imp-tag-aluno { background: rgba(0,169,156,0.12); color: var(--accent); padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+.imp-tag-prof  { background: rgba(240,180,41,0.12); color: #f0b429; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+.imp-tag-skip  { background: rgba(255,94,122,0.1); color: #ff5e7a; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+
+/* Stat pills */
+.imp-stat-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.imp-stat-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3,#1a1e28); border: 1px solid var(--border);
+  border-radius: 100px; padding: 5px 12px; font-size: 11px; font-weight: 700;
+}
+.imp-stat-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* Mapeamento de turmas */
+.imp-class-map-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; background: var(--bg3,#1a1e28); border-radius: 8px;
+  border: 1px solid var(--border); margin-bottom: 7px;
+}
+.imp-class-map-old { font-family: 'DM Mono', monospace; color: #f0b429; font-size: 11px; flex: 1; }
+.imp-class-map-arrow { color: var(--text-muted); flex-shrink: 0; font-size: 12px; }
+.imp-class-map-select {
+  flex: 2; background: var(--bg2,#13161e); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--text); font-size: 11px;
+  padding: 5px 9px; outline: none; font-family: inherit;
+}
+.imp-class-map-select:focus { border-color: var(--accent); }
+
+/* Barra de progresso */
+.imp-prog-bar-wrap { height: 5px; background: var(--bg2,#13161e); border-radius: 100px; margin: 10px 0; overflow: hidden; }
+.imp-prog-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #00d1c1); border-radius: 100px; transition: width 0.3s; }
+.imp-prog-log { max-height: 160px; overflow-y: auto; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-muted); line-height: 1.8; }
+.imp-prog-log .ok   { color: #34d399; }
+.imp-prog-log .err  { color: #ff5e7a; }
+.imp-prog-log .warn { color: #f0b429; }
+
+/* Info box */
+.imp-info-box {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(240,180,41,0.08); border: 1px solid rgba(240,180,41,0.18);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px;
+}
+.imp-info-box.success { background: rgba(52,211,153,0.07); border-color: rgba(52,211,153,0.2); }
+.imp-info-box.danger  { background: rgba(255,94,122,0.07); border-color: rgba(255,94,122,0.2); }
+.imp-map-table { width:100%; border-collapse:collapse; font-size:11px; }
+.imp-map-table th { text-align:left; padding:6px 10px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); border-bottom:1px solid var(--border); background:var(--bg3,#1a1e28); }
+.imp-map-table td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.imp-f-old { font-family:'DM Mono',monospace; color:#f0b429; font-size:10px; }
+.imp-f-new { font-family:'DM Mono',monospace; color:var(--accent); font-size:10px; }
+.imp-f-note { color:var(--text-muted); font-size:10px; }
+.imp-badge-skip { background:rgba(255,94,122,0.1); color:#ff5e7a; border-radius:4px; padding:1px 5px; font-size:9px; }
+.imp-badge-join { background:rgba(240,180,41,0.1); color:#f0b429; border-radius:4px; padding:1px 5px; font-size:9px; }
+.imp-section { display:none; }
+.imp-section.active { display:block; }
+/* ═══════════════════════════════════════════════════════════ */
+
 /* Ajuste de contraste do modal de aniversariantes no modo claro */
 [data-theme="light"] #modal-aniversarios > div {
   background: #FFFFFF !important;
@@ -258,107 +397,78 @@
 @media (min-width: 640px) { .ed-section-title { font-size: 17px; } }
 .ed-section-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-/* ── CONFIGURAÇÃO DE GLOW DOS KPIs ── */
-.kpi-membros     { --kpi-text: var(--teal);    --kpi-glow: var(--teal-dim-high);   --kpi-border: var(--teal-border-high);   }
-.kpi-turmas      { --kpi-text: var(--gold);    --kpi-glow: var(--gold-dim-high);   --kpi-border: var(--gold-border-high);   }
-.kpi-professores { --kpi-text: var(--purple);  --kpi-glow: var(--purple-dim-high); --kpi-border: var(--purple-border-high); }
-.kpi-aulas       { --kpi-text: var(--cyan);    --kpi-glow: rgba(84,184,255,0.15);  --kpi-border: rgba(84,184,255,0.3);      }
-.kpi-presenca    { --kpi-text: var(--success); --kpi-glow: var(--green-dim-high);  --kpi-border: var(--green-border-high);  }
+/* ── CONFIGURAÇÃO DE COR DOS KPIs ── */
+.kpi-membros     { --kpi-color: var(--teal);    --kpi-border: rgba(0,217,198,.32);   --kpi-shadow: rgba(0,217,198,.14);   --kpi-glow: rgba(0,217,198,.35); }
+.kpi-turmas      { --kpi-color: var(--gold);    --kpi-border: rgba(215,177,91,.32);  --kpi-shadow: rgba(215,177,91,.14);  --kpi-glow: rgba(215,177,91,.35); }
+.kpi-professores { --kpi-color: var(--purple);  --kpi-border: rgba(155,124,255,.32); --kpi-shadow: rgba(155,124,255,.14); --kpi-glow: rgba(155,124,255,.35); }
+.kpi-aulas       { --kpi-color: var(--cyan);    --kpi-border: rgba(84,184,255,.32);  --kpi-shadow: rgba(84,184,255,.14);  --kpi-glow: rgba(84,184,255,.35); }
+.kpi-presenca    { --kpi-color: var(--success); --kpi-border: rgba(54,211,153,.32);  --kpi-shadow: rgba(54,211,153,.14);  --kpi-glow: rgba(54,211,153,.35); }
+[data-theme="light"] .kpi-membros     { --kpi-color: var(--teal);    --kpi-border: rgba(0,137,123,.28);  --kpi-shadow: rgba(0,137,123,.10);  --kpi-glow: rgba(0,137,123,.2); }
+[data-theme="light"] .kpi-turmas      { --kpi-color: var(--gold);    --kpi-border: rgba(180,83,9,.28);   --kpi-shadow: rgba(180,83,9,.10);   --kpi-glow: rgba(180,83,9,.2); }
+[data-theme="light"] .kpi-professores { --kpi-color: var(--purple);  --kpi-border: rgba(109,40,217,.28); --kpi-shadow: rgba(109,40,217,.10); --kpi-glow: rgba(109,40,217,.2); }
+[data-theme="light"] .kpi-aulas       { --kpi-color: var(--cyan);    --kpi-border: rgba(2,132,199,.28);  --kpi-shadow: rgba(2,132,199,.10);  --kpi-glow: rgba(2,132,199,.2); }
+[data-theme="light"] .kpi-presenca    { --kpi-color: var(--success); --kpi-border: rgba(22,163,74,.28);  --kpi-shadow: rgba(22,163,74,.10);  --kpi-glow: rgba(22,163,74,.2); }
 
 /* ── STATS GRID ── */
+
+/* Card hero: span 2 no mobile, normal no tablet+ */
+.ed-stat-card.kpi-hero { grid-column: span 2; }
+@media (min-width: 640px) { .ed-stat-card.kpi-hero { grid-column: span 1; } }
+
+/* Sparkline */
+.ed-stat-sparkline {
+  position: absolute; bottom: 10px; right: 8px;
+  opacity: 0.18; pointer-events: none; z-index: 0; transition: opacity .3s;
+}
+.ed-stat-card:hover .ed-stat-sparkline { opacity: 0.35; }
+.ed-stat-sparkline svg { display: block; }
+
 .ed-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px; margin-bottom: 10px;
 }
-@media (min-width: 640px)  { .ed-stats { gap: 10px; } }
-@media (min-width: 960px)  { .ed-stats { gap: 12px; margin-bottom: 10px; } }
+@media (min-width: 640px) { .ed-stats { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
+@media (min-width: 960px) { .ed-stats { gap: 12px; margin-bottom: 10px; } }
 
-/* ── KPI CARD — mobile: vertical compacto ── */
+/* ── KPI CARD — padrão home ── */
 .ed-stat-card {
-  background: var(--glass-bg-premium);
-  border: var(--glass-border-premium);
-  border-radius: 14px;
-  padding: 11px 8px 10px;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  position: relative; overflow: hidden;
-  transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  box-shadow: var(--glass-shadow-premium);
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg,14px);
+  padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 0;
+  transition: border-color .22s, transform .22s, box-shadow .22s; cursor: default;
+  position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
+  --kpi-color: var(--teal); --kpi-border: rgba(0,217,198,.32);
+  --kpi-shadow: rgba(0,217,198,.14); --kpi-glow: rgba(0,217,198,.35);
 }
-.ed-stat-card::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse at top right, var(--kpi-glow, rgba(0,217,198,.1)), transparent 65%);
-}
-/* accent bar esquerda */
+[data-theme="light"] .ed-stat-card { background: #fff; border-color: #E2E8F0; box-shadow: 0 4px 6px -1px rgba(15,23,42,.03); }
+
+/* Linha pulsante na base */
 .ed-stat-card::after {
-  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 2.5px;
-  background: var(--kpi-text, var(--teal));
-  border-radius: 0 2px 2px 0;
-  opacity: 0; transition: opacity 0.22s;
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--kpi-color), transparent);
+  animation: ed-kpi-pulse 2.4s ease-in-out infinite;
 }
-.ed-stat-card:hover { transform: translateY(-2px); border-color: var(--kpi-border, rgba(0,217,198,0.35)); }
-.ed-stat-card:hover::after { opacity: 1; }
+@keyframes ed-kpi-pulse { 0%,100% { opacity: .25; } 50% { opacity: .8; } }
+.ed-stat-card:hover { border-color: var(--kpi-border); transform: translateY(-4px); box-shadow: 0 16px 40px var(--kpi-shadow); }
+[data-theme="light"] .ed-stat-card:hover { box-shadow: 0 12px 24px -8px rgba(15,23,42,.10); }
 
-/* ── TABLET+ (≥480px): layout horizontal ── */
-@media (min-width: 480px) {
-  .ed-stat-card {
-    flex-direction: row; align-items: center; text-align: left;
-    gap: 11px; padding: 12px 14px; border-radius: 16px;
-  }
-  .ed-stat-card::after { top: 15%; bottom: 15%; }
+/* Topo: ponto + tag */
+.ed-stat-top  { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+.ed-stat-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--kpi-color); box-shadow: 0 0 8px var(--kpi-color); flex-shrink: 0; }
+.ed-stat-tag  { font-size: 8px; font-weight: 800; letter-spacing: 1.2px; font-family: 'DM Mono',monospace; color: var(--kpi-color); opacity: .8; text-transform: uppercase; }
+
+/* Valor e label */
+.ed-stat-value { font-size: 40px; font-weight: 900; font-family: 'DM Mono',monospace; color: var(--text); line-height: .9; letter-spacing: -3px; text-shadow: 0 0 40px var(--kpi-glow); position: relative; z-index: 1; }
+.ed-stat-label { font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-top: 8px; line-height: 1.3; position: relative; z-index: 1; }
+
+/* Ghost / marca d'água */
+.ed-stat-ghost {
+  position: absolute; right: -12px; bottom: -12px;
+  color: var(--kpi-color); opacity: 0.06; pointer-events: none; z-index: 0;
+  transform: rotate(-8deg); transition: opacity .3s;
 }
-@media (min-width: 960px) {
-  .ed-stat-card { gap: 13px; padding: 13px 16px; border-radius: 18px; }
-}
-
-/* ── ÍCONE WRAP ── */
-.ed-stat-icon-wrap {
-  width: 34px; height: 34px; border-radius: 10px;
-  background: var(--kpi-glow, var(--teal-dim));
-  border: 1.5px solid var(--kpi-border, var(--teal-border));
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; margin: 0 auto 7px;
-  position: relative; z-index: 1;
-  transition: transform .22s var(--ease), box-shadow .22s;
-}
-@media (min-width: 480px) { .ed-stat-icon-wrap { margin: 0; width: 36px; height: 36px; border-radius: 11px; } }
-@media (min-width: 960px) { .ed-stat-icon-wrap { width: 40px; height: 40px; border-radius: 12px; } }
-.ed-stat-card:hover .ed-stat-icon-wrap {
-  transform: scale(1.1);
-  box-shadow: 0 5px 16px var(--kpi-glow, var(--teal-glow));
-}
-[data-theme="light"] .ed-stat-icon-wrap { box-shadow: 0 3px 10px var(--kpi-glow, rgba(0,169,156,0.15)); }
-
-.ed-stat-icon { width: 17px !important; height: 17px !important; color: var(--kpi-text, var(--teal)); }
-@media (min-width: 960px) { .ed-stat-icon { width: 19px !important; height: 19px !important; } }
-
-/* ── TEXTO DO KPI ── */
-.ed-stat-body { position: relative; z-index: 1; }
-@media (min-width: 480px) { .ed-stat-body { flex: 1; min-width: 0; } }
-
-.ed-stat-value {
-  font-size: 17px; font-weight: 900; font-family: 'DM Mono', monospace;
-  color: var(--kpi-text, var(--teal)); letter-spacing: -0.5px; line-height: 1;
-  position: relative; z-index: 1;
-}
-@media (min-width: 480px) { .ed-stat-value { font-size: 19px; letter-spacing: -0.7px; } }
-@media (min-width: 960px) { .ed-stat-value { font-size: 21px; letter-spacing: -0.9px; } }
-
-.ed-stat-label {
-  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.65px;
-  color: var(--text-muted); margin-top: 4px; line-height: 1.3;
-  position: relative; z-index: 1;
-}
-@media (min-width: 480px) { .ed-stat-label { font-size: 10px; margin-top: 2px; } }
-
-/* cores de fundo do ícone */
-.kpi-membros     .ed-stat-icon-wrap { background: rgba(0,217,198,0.12); }
-.kpi-turmas      .ed-stat-icon-wrap { background: rgba(215,177,91,0.12); }
-.kpi-professores .ed-stat-icon-wrap { background: rgba(155,124,255,0.12); }
-.kpi-aulas       .ed-stat-icon-wrap { background: rgba(84,184,255,0.12); }
-.kpi-presenca    .ed-stat-icon-wrap { background: rgba(54,211,153,0.12); }
+.ed-stat-card:hover .ed-stat-ghost { opacity: .11; }
+.ed-stat-ghost i { width: 80px; height: 80px; display: block; }
 
 [data-theme="light"] .kpi-membros     .ed-stat-icon-wrap { background: rgba(0,169,156,0.11); }
 [data-theme="light"] .kpi-turmas      .ed-stat-icon-wrap { background: rgba(201,156,59,0.11); }
@@ -1193,6 +1303,7 @@ function _edRenderTab() {
   else if (tab==='ranking')      _edRenderRanking(panel);
   else if (tab==='relatorios')   _edRenderRelatorios(panel);
   if (window.lucide) lucide.createIcons();
+  if (tab === 'visao-geral') _edAnimKpis();
 }
 
 // ── Navegação entre tabs ──────────────────────────────────
@@ -1367,6 +1478,11 @@ function _buildEdPage(isSec) {
               '<button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">'+
                 '<i data-lucide="key" style="width:16px;height:16px"></i> Alterar senha'+
               '</button>'+
+              (App.session.perfil==='admin' ?
+                '<hr class="divider" style="margin:6px 0">'+
+                '<button class="user-dd-item" onclick="closeDropdown();edOpenModalImportador()" style="color:#f0b429">'+
+                  '<i data-lucide="database" style="width:16px;height:16px"></i> Importador EBD'+
+                '</button>' : '')+
               '<hr class="divider" style="margin:6px 0">'+
               '<button class="user-dd-item danger" onclick="handleLogout()">'+
                 '<i data-lucide="log-out" style="width:16px;height:16px"></i> Sair'+
@@ -1403,6 +1519,11 @@ function _buildEdPage(isSec) {
             '<button onclick="edToggleNavCfg();showTrocarSenha()">'+
               '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
             '</button>'+
+            (App.session.perfil==='admin' ?
+              '<div class="divider"></div>'+
+              '<button onclick="edToggleNavCfg();edOpenModalImportador()" style="color:#f0b429">'+
+                '<i data-lucide="database" style="width:15px;height:15px"></i> Importador EBD'+
+              '</button>' : '')+
             '<div class="divider"></div>'+
             '<button class="danger" onclick="handleLogout()">'+
               '<i data-lucide="log-out" style="width:15px;height:15px"></i> Sair'+
@@ -1456,7 +1577,8 @@ function _buildEdPage(isSec) {
     _modalRelatorioGeral()+
     _modalConfirm()+
     _modalAlertas()+
-    _modalAniversarios()
+    _modalAniversarios()+
+    (App.session.perfil === 'admin' ? _modalImportador() : '')
   );
 }
 
@@ -1479,9 +1601,6 @@ function _edRenderVisaoGeral(panel) {
       _edStatCard(s.totalAlunos || 0, 'Alunos', 'kpi-membros')+
       _edStatCard(s.totalClasses || 0, 'Turmas', 'kpi-turmas')+
       _edStatCard(s.totalProfessores || 0, 'Professores', 'kpi-professores')+
-    '</div>'+
-
-    '<div class="ed-stats" style="margin-top:2px">'+
       _edStatCard(s.totalAulas || 0, 'Aulas registradas', 'kpi-aulas')+
       _edStatCard(s.aulasMes || 0, 'Aulas este mês', 'kpi-membros')+
       _edStatCard((s.presencaMedia || 0) + '%', 'Média presença', 'kpi-presenca')+
@@ -1558,17 +1677,61 @@ function _edStatCard(val, label, kpiClass, iconOverride) {
     'kpi-presenca':    'trending-up',
     'kpi-ausencia':    'user-x'
   };
-  var icon = iconOverride || iconMap[kpiClass] || 'bar-chart-2';
-  var cls = kpiClass ? ' ' + kpiClass : '';
-  return '<div class="ed-stat-card' + cls + '">'+
-    '<div class="ed-stat-icon-wrap">'+
-      '<i data-lucide="'+icon+'" class="ed-stat-icon"></i>'+
+  var icon     = iconOverride || iconMap[kpiClass] || 'bar-chart-2';
+  var isHero   = kpiClass === 'kpi-membros' && !iconOverride;
+  var isPresenca = kpiClass === 'kpi-presenca';
+  var tag      = label.split(' ')[0];
+  var cls      = kpiClass ? ' ' + kpiClass : '';
+  var id       = 'edkv-' + kpiClass + (iconOverride ? '-'+iconOverride : '');
+  var spark    = isPresenca ? _edSparkline() : '';
+  return '<div class="ed-stat-card'+cls+(isHero?' kpi-hero':'')+'">'+
+    '<div class="ed-stat-top">'+
+      '<div class="ed-stat-dot"></div>'+
+      '<span class="ed-stat-tag">'+tag+'</span>'+
     '</div>'+
-    '<div class="ed-stat-body">'+
-      '<div class="ed-stat-value">'+val+'</div>'+
-      '<div class="ed-stat-label">'+label+'</div>'+
-    '</div>'+
+    '<div class="ed-stat-value" id="'+id+'">'+val+'</div>'+
+    '<div class="ed-stat-label">'+label+'</div>'+
+    spark+
+    '<div class="ed-stat-ghost"><i data-lucide="'+icon+'" style="width:80px;height:80px"></i></div>'+
   '</div>';
+}
+
+function _edSparkline() {
+  // Usa histórico de presença se disponível, senão placeholder descendente→atual
+  var pts = (ED.histPresenca && ED.histPresenca.length >= 2)
+    ? ED.histPresenca.slice(-5)
+    : [72, 68, 75, 71, 78];
+  var w = 80, h = 28, pad = 3;
+  var mn = Math.min.apply(null,pts), mx = Math.max.apply(null,pts);
+  var rng = mx - mn || 1;
+  var xs = pts.map(function(_,i){ return pad + i*(w-2*pad)/(pts.length-1); });
+  var ys = pts.map(function(v){ return (h-pad) - (v-mn)/rng*(h-2*pad); });
+  var d  = 'M'+xs[0]+','+ys[0]+xs.slice(1).map(function(x,i){ return 'L'+x+','+ys[i+1]; }).join('');
+  return '<div class="ed-stat-sparkline">'+
+    '<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+
+      '<path d="'+d+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<circle cx="'+xs[xs.length-1]+'" cy="'+ys[ys.length-1]+'" r="2.5" fill="currentColor"/>'+
+    '</svg>'+
+  '</div>';
+}
+
+function _edAnimKpis() {
+  var els = document.querySelectorAll('[id^="edkv-"]');
+  els.forEach(function(el) {
+    var raw    = el.textContent.trim();
+    var isPct  = raw.indexOf('%') !== -1;
+    var target = parseFloat(raw) || 0;
+    if (!target || target < 2) return;
+    var start = 0, dur = 650, t0 = performance.now();
+    function step(now) {
+      var p    = Math.min((now - t0) / dur, 1);
+      var ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(ease * target) + (isPct ? '%' : '');
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = raw;
+    }
+    requestAnimationFrame(step);
+  });
 }
 
 // Converte qualquer formato de data para YYYY-MM-DD (valor de <input type="date">)
@@ -3719,4 +3882,634 @@ function _edUpdateBirthdayBell() {
     body.innerHTML = '<div style="margin:-4px 0">'+h+'</div>';
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+//  MODAL IMPORTADOR EBD
+//  Restrito a perfil === 'admin'
+//  Backend: imp_listarClasses, imp_importarAluno,
+//           imp_importarProfessor, imp_limparDados
+// ══════════════════════════════════════════════════════════════
+
+function _modalImportador() {
+  return '<div class="modal-overlay" id="modal-importador" onclick="if(event.target===this)edCloseModal(\'modal-importador\')">'+
+  '<div class="modal-box">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0">'+
+      '<div>'+
+        '<div style="font-size:16px;font-weight:900;color:var(--text)">Importador EBD</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px">Migração da base do sistema antigo · Escola Dominical</div>'+
+      '</div>'+
+      '<button class="btn btn-ghost btn-sm" style="width:36px;padding:0;flex-shrink:0" onclick="edCloseModal(\'modal-importador\')">✕</button>'+
+    '</div>'+
+
+    '<div class="imp-modal-inner">'+
+
+      '<!-- ═══ STEPS ═══ -->'+
+      '<div class="imp-steps">'+
+        '<div class="imp-step active" id="imp-step-1"><div class="imp-step-num">1</div><span class="imp-step-lbl">Upload</span></div>'+
+        '<div class="imp-step" id="imp-step-2"><div class="imp-step-num">2</div><span class="imp-step-lbl">Análise</span></div>'+
+        '<div class="imp-step" id="imp-step-3"><div class="imp-step-num">3</div><span class="imp-step-lbl">Turmas</span></div>'+
+        '<div class="imp-step" id="imp-step-4"><div class="imp-step-num">4</div><span class="imp-step-lbl">Importar</span></div>'+
+        '<div class="imp-step" id="imp-step-5"><div class="imp-step-num">5</div><span class="imp-step-lbl">Resultado</span></div>'+
+      '</div>'+
+
+      '<!-- ═══ SEÇÃO 1: UPLOAD ═══ -->'+
+      '<div class="imp-section active" id="imp-sec-upload">'+
+
+        '<div class="imp-danger-zone">'+
+          '<div class="imp-danger-title">⚠️ Limpar dados existentes antes de importar</div>'+
+          '<div class="imp-danger-body">Apaga <strong style="color:var(--text)">todos os registros</strong> das abas operacionais (Classes, Alunos, Professores, Aulas, Chamadas, ChamadasInfo), preservando apenas cabeçalhos. Use antes da importação oficial.<br><strong style="color:#ff5e7a">Ação irreversível.</strong></div>'+
+          '<div class="imp-confirm-row">'+
+            '<input type="text" id="imp-confirmar-txt" placeholder="Digite LIMPAR para confirmar" autocomplete="off">'+
+            '<button class="btn btn-sm" id="imp-btn-limpar" onclick="impLimparDados()" disabled style="background:rgba(255,94,122,0.12);border:1.5px solid rgba(255,94,122,0.3);color:#ff5e7a;font-size:12px;font-weight:700;padding:0 14px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .18s;font-family:inherit">🗑 Apagar tudo</button>'+
+          '</div>'+
+          '<div id="imp-limpar-resultado" style="margin-top:8px;font-size:11px;color:var(--text-muted)"></div>'+
+        '</div>'+
+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Carregar planilha exportada</div>'+
+          '<div class="imp-dropzone" id="imp-dropzone">'+
+            '<input type="file" id="imp-file-input" accept=".xlsx,.xls,.csv">'+
+            '<div id="imp-dz-icon" style="font-size:34px;margin-bottom:10px">📂</div>'+
+            '<div id="imp-dz-title" style="font-size:14px;font-weight:800;margin-bottom:4px">Arraste o arquivo aqui</div>'+
+            '<div id="imp-dz-sub" style="font-size:11px;color:var(--text-muted)">ou clique para selecionar</div>'+
+            '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;font-family:DM Mono,monospace">Aceita: .xlsx · .xls · .csv</div>'+
+          '</div>'+
+          '<div id="imp-file-info" style="display:none" class="imp-stat-row"></div>'+
+        '</div>'+
+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Mapeamento de campos</div>'+
+          '<div class="imp-info-box"><span style="flex-shrink:0;font-size:14px">ℹ️</span><div>Campos mapeados do sistema antigo para o modelo atual. <strong style="color:var(--text)">position</strong>: <code>student</code>→Alunos / <code>teacher</code>→Professores.</div></div>'+
+          '<table class="imp-map-table">'+
+            '<thead><tr><th>Campo antigo</th><th></th><th>Campo novo</th><th>Obs.</th></tr></thead>'+
+            '<tbody>'+
+              '<tr><td class="imp-f-old">name</td><td style="color:var(--text-muted);text-align:center;width:24px">→</td><td class="imp-f-new">Nome</td><td class="imp-f-note">Alunos e Professores</td></tr>'+
+              '<tr><td class="imp-f-old">classroom</td><td style="color:var(--text-muted);text-align:center">→</td><td class="imp-f-new">ClasseID</td><td class="imp-f-note">Mapeado por nome de turma</td></tr>'+
+              '<tr><td class="imp-f-old">position</td><td style="color:var(--text-muted);text-align:center">→</td><td class="imp-f-new">— destino —</td><td class="imp-f-note"><span class="imp-badge-join">roteador</span> student/teacher</td></tr>'+
+              '<tr><td class="imp-f-old">phone / email / birthday / date</td><td style="color:var(--text-muted);text-align:center">→</td><td class="imp-f-new">Telefone / Email / DataNasc / CriadoEm</td><td class="imp-f-note">Mapeados direto</td></tr>'+
+              '<tr><td class="imp-f-old">streetName+num+bairro+city+state</td><td style="color:var(--text-muted);text-align:center">→</td><td class="imp-f-new">Endereco</td><td class="imp-f-note"><span class="imp-badge-join">concatenado</span></td></tr>'+
+              '<tr><td class="imp-f-old">status</td><td style="color:var(--text-muted);text-align:center">→</td><td class="imp-f-new">Ativo</td><td class="imp-f-note">"active"→true</td></tr>'+
+              '<tr><td class="imp-f-old">personGender / schoolStatus / maritalStatus</td><td style="color:var(--text-muted);text-align:center">→</td><td class="imp-f-new"><span class="imp-badge-skip">ignorado</span></td><td class="imp-f-note">Sem campo equivalente</td></tr>'+
+            '</tbody>'+
+          '</table>'+
+        '</div>'+
+
+        '<div style="display:flex;justify-content:flex-end;margin-top:4px">'+
+          '<button class="btn btn-primary btn-sm" id="imp-btn-analisar" disabled onclick="impAnalisar()">Analisar planilha →</button>'+
+        '</div>'+
+      '</div>'+
+
+      '<!-- ═══ SEÇÃO 2: ANÁLISE ═══ -->'+
+      '<div class="imp-section" id="imp-sec-analise">'+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Resumo da importação</div>'+
+          '<div class="imp-stat-row" id="imp-resumo-stats"></div>'+
+        '</div>'+
+        '<div id="imp-dup-box" class="imp-info-box" style="display:none"><span style="font-size:14px;flex-shrink:0">⚠️</span><div id="imp-dup-msg"></div></div>'+
+        '<div id="imp-inat-box" class="imp-info-box danger" style="display:none"><span style="font-size:14px;flex-shrink:0">🔴</span><div id="imp-inat-msg"></div></div>'+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Preview dos dados mapeados</div>'+
+          '<div class="imp-preview-wrap">'+
+            '<table class="imp-preview-table">'+
+              '<thead><tr><th>Tipo</th><th>Nome</th><th>Turma</th><th>Telefone</th><th>Nasc.</th><th>Ativo</th></tr></thead>'+
+              '<tbody id="imp-preview-body"></tbody>'+
+            '</table>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:4px">'+
+          '<button class="btn btn-secondary btn-sm" onclick="impGoStep(1)">← Voltar</button>'+
+          '<button class="btn btn-primary btn-sm" onclick="impGoStep3()">Mapear turmas →</button>'+
+        '</div>'+
+      '</div>'+
+
+      '<!-- ═══ SEÇÃO 3: TURMAS ═══ -->'+
+      '<div class="imp-section" id="imp-sec-turmas">'+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Mapear turmas para classes existentes</div>'+
+          '<div class="imp-info-box"><span style="font-size:14px;flex-shrink:0">🏫</span><div>Para cada turma da planilha, selecione a correspondente no sistema. Se não existir, selecione <strong style="color:var(--text)">— Criar nova turma —</strong> e o importador a cria automaticamente.</div></div>'+
+          '<div id="imp-class-map-list"><div style="padding:18px;text-align:center;color:var(--text-muted);font-size:12px">Carregando turmas...</div></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:4px">'+
+          '<button class="btn btn-secondary btn-sm" onclick="impGoStep(2)">← Voltar</button>'+
+          '<button class="btn btn-primary btn-sm" id="imp-btn-importar" onclick="impIniciarImportacao()">🚀 Iniciar importação</button>'+
+        '</div>'+
+      '</div>'+
+
+      '<!-- ═══ SEÇÃO 4: PROGRESSO ═══ -->'+
+      '<div class="imp-section" id="imp-sec-importando">'+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Importando registros...</div>'+
+          '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">'+
+            '<span id="imp-prog-label">Preparando...</span><span id="imp-prog-pct">0%</span>'+
+          '</div>'+
+          '<div class="imp-prog-bar-wrap"><div class="imp-prog-bar-fill" id="imp-prog-bar" style="width:0%"></div></div>'+
+          '<div class="imp-prog-log" id="imp-prog-log"></div>'+
+        '</div>'+
+      '</div>'+
+
+      '<!-- ═══ SEÇÃO 5: RESULTADO ═══ -->'+
+      '<div class="imp-section" id="imp-sec-resultado">'+
+        '<div class="imp-card">'+
+          '<div class="imp-card-title">Importação concluída</div>'+
+          '<div class="imp-info-box success" id="imp-resultado-box">'+
+            '<span style="font-size:14px;flex-shrink:0">✅</span>'+
+            '<div id="imp-resultado-msg"></div>'+
+          '</div>'+
+          '<div class="imp-stat-row" id="imp-resultado-stats"></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:4px">'+
+          '<button class="btn btn-secondary btn-sm" onclick="impReset()">Nova importação</button>'+
+          '<button class="btn btn-primary btn-sm" onclick="edCloseModal(\'modal-importador\')">Concluir →</button>'+
+        '</div>'+
+      '</div>'+
+
+    '</div>'+  // .imp-modal-inner
+  '</div>'+    // .modal-box
+  '</div>';    // .modal-overlay
+}
+
+// ── Abrir modal importador (apenas admin) ──────────────────
+var _impListenersRegistered = false;
+var _impXlsxLoaded = false;
+
+function edOpenModalImportador() {
+  if (!App.session || App.session.perfil !== 'admin') {
+    _toast('Acesso restrito a administradores.', 'error');
+    return;
+  }
+
+  // Carrega XLSX dinamicamente na primeira vez
+  if (!_impXlsxLoaded && typeof XLSX === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = function() { _impXlsxLoaded = true; };
+    document.head.appendChild(s);
+  } else {
+    _impXlsxLoaded = true;
+  }
+
+  impReset();
+  edOpenModal('modal-importador');
+
+  // Registra listeners apenas uma vez
+  if (_impListenersRegistered) return;
+  _impListenersRegistered = true;
+
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'imp-confirmar-txt') {
+      var btn = document.getElementById('imp-btn-limpar');
+      if (btn) btn.disabled = e.target.value.trim().toUpperCase() !== 'LIMPAR';
+    }
+  });
+  document.addEventListener('dragover', function(e) {
+    var dz = document.getElementById('imp-dropzone');
+    if (dz && dz.contains(e.target)) { e.preventDefault(); dz.classList.add('drag'); }
+  });
+  document.addEventListener('dragleave', function(e) {
+    var dz = document.getElementById('imp-dropzone');
+    if (dz && !dz.contains(e.relatedTarget)) dz.classList.remove('drag');
+  });
+  document.addEventListener('drop', function(e) {
+    var dz = document.getElementById('imp-dropzone');
+    if (dz && (dz === e.target || dz.contains(e.target))) {
+      e.preventDefault(); dz.classList.remove('drag');
+      var f = e.dataTransfer.files[0];
+      if (f) impHandleFile(f);
+    }
+  });
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'imp-file-input' && e.target.files[0]) {
+      impHandleFile(e.target.files[0]);
+    }
+  });
+}
+
+// ── Estado interno do importador ───────────────────────────
+var _imp = {
+  rawData: [], mappedData: [], classesNew: [],
+  classMapping: {}, uniqueClasses: []
+};
+
+function impReset() {
+  _imp.rawData = []; _imp.mappedData = []; _imp.classesNew = [];
+  _imp.classMapping = {}; _imp.uniqueClasses = [];
+  // Resetar UI
+  var dz = document.getElementById('imp-dropzone');
+  if (dz) {
+    dz.classList.remove('dz-ok','drag');
+    var icon  = document.getElementById('imp-dz-icon');
+    var title = document.getElementById('imp-dz-title');
+    var sub   = document.getElementById('imp-dz-sub');
+    if (icon)  icon.textContent  = '📂';
+    if (title) title.textContent = 'Arraste o arquivo aqui';
+    if (sub)   sub.textContent   = 'ou clique para selecionar';
+  }
+  var fi = document.getElementById('imp-file-info');
+  if (fi) { fi.style.display = 'none'; fi.innerHTML = ''; }
+  var ba = document.getElementById('imp-btn-analisar');
+  if (ba) ba.disabled = true;
+  var ct = document.getElementById('imp-confirmar-txt');
+  if (ct) ct.value = '';
+  var bl = document.getElementById('imp-btn-limpar');
+  if (bl) bl.disabled = true;
+  var lr = document.getElementById('imp-limpar-resultado');
+  if (lr) lr.textContent = '';
+  var log = document.getElementById('imp-prog-log');
+  if (log) log.innerHTML = '';
+  impGoStep(1);
+}
+
+// ── Input do campo de confirmação (listener registrado em edOpenModalImportador) ──
+
+// ── Limpar dados ──────────────────────────────────────────
+function impLimparDados() {
+  var btn = document.getElementById('imp-btn-limpar');
+  var res = document.getElementById('imp-limpar-resultado');
+  if (!btn || !res) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ Limpando...';
+  res.textContent = '';
+
+  if (typeof google === 'undefined' || !google.script) {
+    setTimeout(function() {
+      res.innerHTML = '<span style="color:#34d399">✓ Simulado (sem GAS).</span>';
+      btn.textContent = '🗑 Apagar tudo';
+      var ct = document.getElementById('imp-confirmar-txt');
+      if (ct) ct.value = '';
+    }, 800);
+    return;
+  }
+
+  google.script.run
+    .withFailureHandler(function(e) {
+      res.innerHTML = '<span style="color:#ff5e7a">✗ Erro: ' + _esc(e.message) + '</span>';
+      btn.textContent = '🗑 Apagar tudo';
+    })
+    .withSuccessHandler(function(r) {
+      btn.textContent = '🗑 Apagar tudo';
+      var ct = document.getElementById('imp-confirmar-txt');
+      if (ct) ct.value = '';
+      if (!r || !r.success) {
+        res.innerHTML = '<span style="color:#ff5e7a">✗ ' + _esc(r && r.error ? r.error : 'Erro') + '</span>';
+        return;
+      }
+      var det = (r.data && r.data.detalhes) ? r.data.detalhes : [];
+      res.innerHTML = '<span style="color:#34d399">✓ Limpeza concluída!</span> ' +
+        det.map(function(d){ return _esc(d); }).join(' · ');
+      _toast('Dados apagados. Agora faça o upload da base oficial.', 'success');
+    })
+    .imp_limparDados(App.session ? App.session.token || '' : '');
+}
+
+// ── Navegação entre steps ─────────────────────────────────
+function impGoStep(n) {
+  var ids = ['upload','analise','turmas','importando','resultado'];
+  ids.forEach(function(id, i) {
+    var sec = document.getElementById('imp-sec-'+id);
+    if (sec) sec.classList.toggle('active', i+1===n);
+    var st = document.getElementById('imp-step-'+(i+1));
+    if (!st) return;
+    st.classList.remove('active','done');
+    if (i+1 < n) st.classList.add('done');
+    if (i+1 === n) st.classList.add('active');
+  });
+}
+
+// ── Upload / parse do arquivo (listeners registrados em edOpenModalImportador) ──
+function impHandleFile(file) {
+  if (typeof XLSX === 'undefined') {
+    _toast('Biblioteca XLSX não carregada. Verifique a conexão.', 'error');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e2) {
+    try {
+      var wb = XLSX.read(e2.target.result, { type: 'binary', cellDates: false });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      _imp.rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!_imp.rawData.length) { _toast('Planilha vazia ou formato inválido.', 'error'); return; }
+
+      var dz = document.getElementById('imp-dropzone');
+      if (dz) dz.classList.add('dz-ok');
+      var icon  = document.getElementById('imp-dz-icon');
+      var title = document.getElementById('imp-dz-title');
+      var sub   = document.getElementById('imp-dz-sub');
+      if (icon)  icon.textContent  = '✅';
+      if (title) title.textContent = file.name;
+      if (sub)   sub.textContent   = _imp.rawData.length + ' registros encontrados';
+
+      var fi = document.getElementById('imp-file-info');
+      if (fi) {
+        fi.style.display = 'flex';
+        fi.innerHTML =
+          '<div class="imp-stat-pill"><div class="dot" style="background:var(--accent)"></div>'+_imp.rawData.length+' linhas</div>'+
+          '<div class="imp-stat-pill"><div class="dot" style="background:#f0b429"></div>'+_esc(file.name)+'</div>'+
+          '<div class="imp-stat-pill"><div class="dot" style="background:var(--text-muted)"></div>'+(file.size/1024).toFixed(1)+' KB</div>';
+      }
+
+      var ba = document.getElementById('imp-btn-analisar');
+      if (ba) ba.disabled = false;
+
+      var cols = Object.keys(_imp.rawData[0]);
+      _toast('Colunas: ' + cols.slice(0,5).join(', ') + (cols.length>5?'...':''), 'success');
+    } catch(err) { _toast('Erro ao ler arquivo: ' + err.message, 'error'); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ── Análise / mapeamento ──────────────────────────────────
+function impFmtDate(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[3]+'/'+m[2]+'/'+m[1];
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  var n = parseFloat(s);
+  if (!isNaN(n) && n > 1000) {
+    var d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  }
+  return s;
+}
+function impIsAtivo(val) {
+  if (!val) return false;
+  var s = String(val).toLowerCase().trim();
+  return s==='active'||s==='ativo'||s==='true'||s==='1';
+}
+function impBuildEndereco(row) {
+  var parts = [];
+  if (row.streetName)       parts.push(row.streetName);
+  if (row.streetNumber)     parts.push(row.streetNumber);
+  if (row.neighborhoodName) parts.push(row.neighborhoodName);
+  if (row.city)             parts.push(row.city);
+  if (row.state)            parts.push(row.state);
+  var addr = parts.filter(Boolean).join(', ');
+  var pais = [];
+  if (row.parentOne) pais.push('Resp1: '+row.parentOne+(row.phoneOne?' ('+row.phoneOne+')':''));
+  if (row.parentTwo) pais.push('Resp2: '+row.parentTwo+(row.phoneTwo?' ('+row.phoneTwo+')':''));
+  if (pais.length) addr += (addr?' | ':'')+pais.join(' | ');
+  return addr;
+}
+
+function impAnalisar() {
+  _imp.mappedData = [];
+  var seenNames = {};
+  _imp.rawData.forEach(function(row) {
+    var pos  = String(row.position||'').toLowerCase().trim();
+    var tipo = (pos==='teacher'||pos==='professor') ? 'prof' : 'aluno';
+    var ativo = impIsAtivo(row.status);
+    var dados = {
+      Nome:     String(row.name||'').trim(),
+      DataNasc: impFmtDate(row.birthday),
+      Classe:   String(row.classroom||'').trim(),
+      Telefone: String(row.phone||'').trim(),
+      Email:    String(row.email||'').trim(),
+      Endereco: impBuildEndereco(row),
+      Ativo:    ativo,
+      CriadoEm: impFmtDate(row.date)
+    };
+    if (!dados.Nome) return;
+    var nLow = dados.Nome.toLowerCase();
+    var dup  = !!seenNames[nLow];
+    seenNames[nLow] = true;
+    _imp.mappedData.push({ tipo:tipo, dados:dados, ativo:ativo, dup:dup });
+  });
+
+  var alunos   = _imp.mappedData.filter(function(r){ return r.tipo==='aluno'&&!r.dup; });
+  var profs    = _imp.mappedData.filter(function(r){ return r.tipo==='prof'&&!r.dup; });
+  var ativos   = _imp.mappedData.filter(function(r){ return r.ativo&&!r.dup; });
+  var inativos = _imp.mappedData.filter(function(r){ return !r.ativo&&!r.dup; });
+  var dups     = _imp.mappedData.filter(function(r){ return r.dup; });
+
+  var rs = document.getElementById('imp-resumo-stats');
+  if (rs) rs.innerHTML =
+    '<div class="imp-stat-pill"><div class="dot" style="background:var(--accent)"></div>'+alunos.length+' alunos</div>'+
+    '<div class="imp-stat-pill"><div class="dot" style="background:#f0b429"></div>'+profs.length+' professores</div>'+
+    '<div class="imp-stat-pill"><div class="dot" style="background:#34d399"></div>'+ativos.length+' ativos</div>'+
+    '<div class="imp-stat-pill"><div class="dot" style="background:#ff5e7a"></div>'+inativos.length+' inativos</div>'+
+    (dups.length?'<div class="imp-stat-pill"><div class="dot" style="background:var(--text-muted)"></div>'+dups.length+' duplicados</div>':'');
+
+  var dupBox = document.getElementById('imp-dup-box');
+  var dupMsg = document.getElementById('imp-dup-msg');
+  if (dupBox && dupMsg) {
+    if (dups.length) {
+      dupBox.style.display = 'flex';
+      var nomes = dups.map(function(d){ return d.dados.Nome; }).slice(0,5).join(', ');
+      dupMsg.textContent = dups.length+' nome(s) duplicado(s): '+nomes+(dups.length>5?'...':'')+'. Serão ignorados na importação.';
+    } else { dupBox.style.display = 'none'; }
+  }
+  var inBox = document.getElementById('imp-inat-box');
+  var inMsg = document.getElementById('imp-inat-msg');
+  if (inBox && inMsg) {
+    if (inativos.length) {
+      inBox.style.display = 'flex';
+      inMsg.innerHTML = '<strong>'+inativos.length+' registros inativos</strong> serão importados com Ativo=false e não aparecerão nas listas do sistema.';
+    } else { inBox.style.display = 'none'; }
+  }
+
+  var tbody = document.getElementById('imp-preview-body');
+  if (tbody) {
+    var html = ''; var count = 0;
+    _imp.mappedData.forEach(function(r) {
+      if (count >= 200) return;
+      var cls = r.dup ? 'imp-row-skip' : (r.tipo==='prof' ? 'imp-row-prof' : 'imp-row-aluno');
+      var tag = r.dup ? '<span class="imp-tag-skip">DUP</span>' :
+                (r.tipo==='prof' ? '<span class="imp-tag-prof">Prof</span>' : '<span class="imp-tag-aluno">Aluno</span>');
+      html += '<tr class="'+cls+'">'+
+        '<td>'+tag+'</td>'+
+        '<td>'+_esc(r.dados.Nome)+'</td>'+
+        '<td>'+_esc(r.dados.Classe)+'</td>'+
+        '<td>'+_esc(r.dados.Telefone)+'</td>'+
+        '<td>'+_esc(r.dados.DataNasc)+'</td>'+
+        '<td>'+(r.ativo?'<span style="color:#34d399">✓</span>':'<span style="color:#ff5e7a">✗</span>')+'</td>'+
+      '</tr>';
+      count++;
+    });
+    if (_imp.mappedData.length > 200)
+      html += '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:10px;font-size:10px">... e mais '+(_imp.mappedData.length-200)+' registros</td></tr>';
+    tbody.innerHTML = html;
+  }
+
+  _imp.uniqueClasses = [];
+  var seenCls = {};
+  _imp.mappedData.forEach(function(r) {
+    if (r.dados.Classe && !seenCls[r.dados.Classe]) {
+      seenCls[r.dados.Classe] = true;
+      _imp.uniqueClasses.push(r.dados.Classe);
+    }
+  });
+
+  impGoStep(2);
+}
+
+// ── Step 3: Mapeamento de turmas ──────────────────────────
+function impGoStep3() {
+  impGoStep(3);
+  if (typeof google === 'undefined' || !google.script) {
+    _imp.classesNew = [];
+    impBuildClassMap();
+    return;
+  }
+  google.script.run
+    .withFailureHandler(function() {
+      _imp.classesNew = [];
+      impBuildClassMap();
+      _toast('Não foi possível carregar turmas. Todas serão criadas.', 'error');
+    })
+    .withSuccessHandler(function(r) {
+      _imp.classesNew = (r && r.success && r.data) ? r.data : [];
+      impBuildClassMap();
+    })
+    .imp_listarClasses();
+}
+
+function impBuildClassMap() {
+  var list = document.getElementById('imp-class-map-list');
+  if (!list) return;
+  if (!_imp.uniqueClasses.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:8px">Nenhuma turma encontrada na planilha.</div>';
+    return;
+  }
+  var optsHtml = '<option value="__new__">— Criar nova turma —</option>';
+  _imp.classesNew.forEach(function(c) {
+    optsHtml += '<option value="'+_esc(c.ID)+'">'+_esc(c.Nome)+'</option>';
+  });
+  var html = '';
+  _imp.uniqueClasses.forEach(function(cls) {
+    html += '<div class="imp-class-map-row">'+
+      '<div class="imp-class-map-old">'+_esc(cls)+'</div>'+
+      '<div class="imp-class-map-arrow">→</div>'+
+      '<select class="imp-class-map-select" data-old="'+_esc(cls)+'">'+optsHtml+'</select>'+
+    '</div>';
+  });
+  list.innerHTML = html;
+  // Auto-match por nome
+  list.querySelectorAll('select').forEach(function(sel) {
+    var oldName = sel.getAttribute('data-old');
+    for (var i = 0; i < _imp.classesNew.length; i++) {
+      if (_imp.classesNew[i].Nome.toLowerCase().trim() === (oldName||'').toLowerCase().trim()) {
+        sel.value = _imp.classesNew[i].ID;
+        break;
+      }
+    }
+  });
+}
+
+// ── Importação ────────────────────────────────────────────
+function impIniciarImportacao() {
+  document.querySelectorAll('.imp-class-map-select').forEach(function(sel) {
+    _imp.classMapping[sel.getAttribute('data-old')] = sel.value;
+  });
+  impGoStep(4);
+  setTimeout(impExecutar, 300);
+}
+
+function impExecutar() {
+  var registros = _imp.mappedData.filter(function(r){ return !r.dup; });
+  var total = registros.length;
+  var ok = 0, erros = 0, dup = 0, idx = 0;
+  var log = document.getElementById('imp-prog-log');
+
+  function _log(msg, cls) {
+    if (!log) return;
+    var line = document.createElement('div');
+    line.className = cls || '';
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+  function _setProgress(done) {
+    var pct = Math.round(done/total*100);
+    var bar = document.getElementById('imp-prog-bar');
+    var pctEl = document.getElementById('imp-prog-pct');
+    var lblEl = document.getElementById('imp-prog-label');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (lblEl) lblEl.textContent = 'Importando '+done+'/'+total+'...';
+  }
+  function _finalize() {
+    var lblEl = document.getElementById('imp-prog-label');
+    var pctEl = document.getElementById('imp-prog-pct');
+    var bar = document.getElementById('imp-prog-bar');
+    if (lblEl) lblEl.textContent = 'Concluído!';
+    if (pctEl) pctEl.textContent = '100%';
+    if (bar) bar.style.width = '100%';
+
+    var rmsg = document.getElementById('imp-resultado-msg');
+    if (rmsg) rmsg.innerHTML =
+      '<strong>'+ok+' registros importados</strong> com sucesso.'+
+      (dup ? ' <span style="color:#f0b429">'+dup+' duplicados ignorados.</span>' : '')+
+      (erros ? ' <span style="color:#ff5e7a">'+erros+' erros.</span>' : '');
+
+    var alunosImp = registros.filter(function(r){ return r.tipo==='aluno'; }).length;
+    var profsImp  = registros.filter(function(r){ return r.tipo==='prof'; }).length;
+    var rStats = document.getElementById('imp-resultado-stats');
+    if (rStats) rStats.innerHTML =
+      '<div class="imp-stat-pill"><div class="dot" style="background:var(--accent)"></div>'+alunosImp+' alunos</div>'+
+      '<div class="imp-stat-pill"><div class="dot" style="background:#f0b429"></div>'+profsImp+' professores</div>'+
+      '<div class="imp-stat-pill"><div class="dot" style="background:#34d399"></div>'+ok+' importados</div>'+
+      (erros?'<div class="imp-stat-pill"><div class="dot" style="background:#ff5e7a"></div>'+erros+' falhas</div>':'');
+    impGoStep(5);
+  }
+
+  function processNext() {
+    if (idx >= total) { _finalize(); return; }
+    var r = registros[idx++];
+    var oldClasse  = r.dados.Classe;
+    var classeVal  = _imp.classMapping[oldClasse] || '__new__';
+    var isNew      = classeVal === '__new__';
+    var classeID   = isNew ? '' : classeVal;
+    var nomeTurma  = isNew ? oldClasse : null;
+    var dados = {
+      Nome:     r.dados.Nome,
+      DataNasc: r.dados.DataNasc,
+      ClasseID: classeID,
+      Telefone: r.dados.Telefone,
+      Email:    r.dados.Email,
+      Endereco: r.dados.Endereco,
+      Ativo:    r.dados.Ativo !== undefined ? r.dados.Ativo : r.ativo,
+      CriadoEm: r.dados.CriadoEm
+    };
+    _setProgress(idx);
+
+    if (typeof google === 'undefined' || !google.script) {
+      setTimeout(function() {
+        ok++;
+        _log('✓ ' + r.dados.Nome + ' (' + r.tipo + ')', 'ok');
+        processNext();
+      }, 15);
+      return;
+    }
+
+    var fn = r.tipo === 'prof' ? 'imp_importarProfessor' : 'imp_importarAluno';
+    google.script.run
+      .withFailureHandler(function(e) {
+        erros++;
+        _log('✗ ' + r.dados.Nome + ': ' + e.message, 'err');
+        processNext();
+      })
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          ok++;
+          _log('✓ ' + r.dados.Nome + ' (' + r.tipo + ')', 'ok');
+        } else {
+          var msg = res && res.error ? res.error : 'erro';
+          if (msg.indexOf('Duplicado') !== -1 || msg.indexOf('já existe') !== -1) {
+            dup++;
+            _log('⚠ ' + r.dados.Nome + ' — ' + msg, 'warn');
+          } else {
+            erros++;
+            _log('✗ ' + r.dados.Nome + ': ' + msg, 'err');
+          }
+        }
+        processNext();
+      })
+      [fn](dados, nomeTurma);
+  }
+
+  _log('🚀 Iniciando importação de ' + total + ' registros...');
+  processNext();
+}
+// ═══════════════════════════════════════════════════════════
+
 </script>

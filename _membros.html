@@ -109,38 +109,79 @@
 #mb-panel { padding: 16px; max-width: 1100px; margin: 0 auto; padding-bottom: 80px; overflow-x: hidden; }
 @media (min-width: 640px) { #mb-panel { padding: 20px 24px 80px; } }
 
-/* ── KPI cards (reutiliza .ed-stat-card) ── */
+/* ── KPI cards — padrão home (ghost + pulse-line) ── */
 .ed-stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px; margin-bottom: 16px;
+  gap: 10px; margin-bottom: 16px;
 }
 @media (min-width: 480px) { .ed-stats { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 960px) { .ed-stats { grid-template-columns: repeat(5, 1fr); gap: 12px; } }
 
 .ed-stat-card {
-  background: var(--glass-bg-premium); border: var(--glass-border-premium);
-  border-radius: 16px; padding: 12px 14px;
-  display: flex; align-items: center; gap: 10px;
-  box-shadow: var(--glass-shadow-premium);
-  transition: transform .2s, border-color .2s;
-  --kpi-text: var(--teal); --kpi-glow: var(--teal-dim); --kpi-border: var(--teal-border);
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg,14px);
+  padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 0;
+  transition: border-color .22s, transform .22s, box-shadow .22s; cursor: default;
+  position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
+  --kpi-color: var(--teal); --kpi-border: rgba(0,217,198,.32);
+  --kpi-shadow: rgba(0,217,198,.14); --kpi-glow: rgba(0,217,198,.35);
 }
-.ed-stat-card:hover { transform: translateY(-2px); border-color: var(--kpi-border); }
-.ed-stat-icon-wrap {
-  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
-  background: var(--kpi-glow); border: 1px solid var(--kpi-border);
-  display: flex; align-items: center; justify-content: center;
+[data-theme="light"] .ed-stat-card {
+  background: #fff; border-color: #E2E8F0;
+  box-shadow: 0 4px 6px -1px rgba(15,23,42,.03), 0 2px 4px -1px rgba(15,23,42,.02);
 }
-.ed-stat-icon { width: 16px !important; height: 16px !important; color: var(--kpi-text); }
-.ed-stat-value { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.5px; }
-.ed-stat-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+/* Linha pulsante na base */
+.ed-stat-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--kpi-color), transparent);
+  animation: mb-kpi-pulse 2.4s ease-in-out infinite;
+}
+@keyframes mb-kpi-pulse { 0%,100% { opacity: .25; } 50% { opacity: .8; } }
+.ed-stat-card:hover { border-color: var(--kpi-border); transform: translateY(-4px); box-shadow: 0 16px 40px var(--kpi-shadow); }
+[data-theme="light"] .ed-stat-card:hover { box-shadow: 0 12px 24px -8px rgba(15,23,42,.10); }
 
-.kpi-total    { --kpi-text: var(--teal);    --kpi-glow: rgba(0,217,198,.12); --kpi-border: rgba(0,217,198,.25); }
-.kpi-ativos   { --kpi-text: var(--success); --kpi-glow: rgba(54,211,153,.12); --kpi-border: rgba(54,211,153,.25); }
-.kpi-inativos { --kpi-text: var(--danger);  --kpi-glow: rgba(255,94,122,.12); --kpi-border: rgba(255,94,122,.25); }
-.kpi-aniv     { --kpi-text: var(--gold);    --kpi-glow: rgba(215,177,91,.12); --kpi-border: rgba(215,177,91,.25); }
-.kpi-semfoto  { --kpi-text: var(--purple);  --kpi-glow: rgba(155,124,255,.12); --kpi-border: rgba(155,124,255,.25); }
+/* Topo: ponto + tag */
+.ed-stat-top  { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
+.ed-stat-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--kpi-color); box-shadow: 0 0 8px var(--kpi-color); flex-shrink: 0; }
+.ed-stat-tag  { font-size: 8px; font-weight: 800; letter-spacing: 1.2px; font-family: 'DM Mono',monospace; color: var(--kpi-color); opacity: .8; text-transform: uppercase; }
+.ed-stat-value { font-size: 40px; font-weight: 900; font-family: 'DM Mono',monospace; color: var(--text); line-height: .9; letter-spacing: -3px; text-shadow: 0 0 40px var(--kpi-glow); position: relative; z-index: 1; }
+.ed-stat-label { font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-top: 8px; line-height: 1.3; position: relative; z-index: 1; }
+
+/* Ghost / marca d'água */
+.ed-stat-ghost {
+  position: absolute; right: -12px; bottom: -12px;
+  color: var(--kpi-color); opacity: 0.06; pointer-events: none; z-index: 0;
+  transform: rotate(-8deg); transition: opacity .3s;
+}
+.ed-stat-card:hover .ed-stat-ghost { opacity: .11; }
+.ed-stat-ghost i { width: 80px; height: 80px; display: block; }
+
+/* Card hero: span 2 no mobile, normal no desktop */
+.ed-stat-card.kpi-hero {
+  grid-column: span 2;
+}
+@media (min-width: 480px) { .ed-stat-card.kpi-hero { grid-column: span 1; } }
+
+/* Sparkline */
+.ed-stat-sparkline {
+  position: absolute; bottom: 10px; right: 8px;
+  opacity: 0.18; pointer-events: none; z-index: 0;
+  transition: opacity .3s;
+}
+.ed-stat-card:hover .ed-stat-sparkline { opacity: 0.35; }
+.ed-stat-sparkline svg { display: block; }
+
+/* Tokens por classe */
+.kpi-total    { --kpi-color: var(--teal);    --kpi-border: rgba(0,217,198,.32);  --kpi-shadow: rgba(0,217,198,.14);  --kpi-glow: rgba(0,217,198,.35); }
+.kpi-ativos   { --kpi-color: var(--success); --kpi-border: rgba(54,211,153,.32); --kpi-shadow: rgba(54,211,153,.14); --kpi-glow: rgba(54,211,153,.35); }
+.kpi-inativos { --kpi-color: var(--danger);  --kpi-border: rgba(255,94,122,.32); --kpi-shadow: rgba(255,94,122,.14); --kpi-glow: rgba(255,94,122,.35); }
+.kpi-aniv     { --kpi-color: var(--gold);    --kpi-border: rgba(215,177,91,.32); --kpi-shadow: rgba(215,177,91,.14); --kpi-glow: rgba(215,177,91,.35); }
+.kpi-semfoto  { --kpi-color: var(--purple);  --kpi-border: rgba(155,124,255,.32);--kpi-shadow: rgba(155,124,255,.14);--kpi-glow: rgba(155,124,255,.35); }
+[data-theme="light"] .kpi-total    { --kpi-color: var(--teal);    --kpi-border: rgba(0,137,123,.28);  --kpi-shadow: rgba(0,137,123,.10);  --kpi-glow: rgba(0,137,123,.2); }
+[data-theme="light"] .kpi-ativos   { --kpi-color: var(--success); --kpi-border: rgba(22,163,74,.28);  --kpi-shadow: rgba(22,163,74,.10);  --kpi-glow: rgba(22,163,74,.2); }
+[data-theme="light"] .kpi-inativos { --kpi-color: var(--danger);  --kpi-border: rgba(220,38,38,.28);  --kpi-shadow: rgba(220,38,38,.10);  --kpi-glow: rgba(220,38,38,.2); }
+[data-theme="light"] .kpi-aniv     { --kpi-color: var(--gold);    --kpi-border: rgba(180,83,9,.28);   --kpi-shadow: rgba(180,83,9,.10);   --kpi-glow: rgba(180,83,9,.2); }
+[data-theme="light"] .kpi-semfoto  { --kpi-color: var(--purple);  --kpi-border: rgba(109,40,217,.28); --kpi-shadow: rgba(109,40,217,.10); --kpi-glow: rgba(109,40,217,.2); }
 
 /* ── Section header ── */
 .ed-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -665,34 +706,50 @@ function mbSetTab(tab) {
 function _mbRenderPanel() {
   var panel = document.getElementById('mb-panel');
   if (!panel) return;
-  if (MB.tab === 'lista')   panel.innerHTML = _mbBuildLista();
-  if (MB.tab === 'form')    panel.innerHTML = _mbBuildForm();
-  if (MB.tab === 'detalhe')      panel.innerHTML = _mbBuildDetalhe();
+  if (MB.tab === 'lista')       panel.innerHTML = _mbBuildLista();
+  if (MB.tab === 'form')        panel.innerHTML = _mbBuildForm();
+  if (MB.tab === 'detalhe')     panel.innerHTML = _mbBuildDetalhe();
   if (MB.tab === 'carteirinha') panel.innerHTML = _mbBuildCarteirinha();
   if (window.lucide) lucide.createIcons();
+  if (MB.tab === 'lista') _mbAnimKpis();
+  _mbBindSearchListeners();
 }
+
+// ── Delegação de eventos — registrada UMA VEZ, sobrevive a qualquer re-render ──
+(function _mbInitDelegation() {
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'mb-search-input') {
+      MB.search = e.target.value;
+      mbAtualizarLista();
+    }
+    if (e.target && e.target.id === 'mb-card-search-input') {
+      MB.cardSearch = e.target.value;
+      mbAtualizarCardLista();
+    }
+  });
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'mb-filtro-select') {
+      MB.filtroAtivo = e.target.value;
+      mbAtualizarLista();
+    }
+  });
+})();
+
+function _mbBindSearchListeners() { /* delegação já cobre tudo — mantido para compatibilidade */ }
+function _mbOnSearchLista(e) { MB.search = e.target.value; mbAtualizarLista(); }
+function _mbOnSearchCard(e)  { MB.cardSearch = e.target.value; mbAtualizarCardLista(); }
+function _mbOnFiltroChange(e){ MB.filtroAtivo = e.target.value; mbAtualizarLista(); }
 
 // ════════════════════════════════════════════
 //  ABA: LISTA
 // ════════════════════════════════════════════
 function _mbBuildLista() {
-  var lista = MB.membros.filter(function(m){
-    var q = (MB.search || '').toLowerCase();
-    var ok = !q ||
-      (m.nome||'').toLowerCase().indexOf(q) !== -1 ||
-      (m.rol||'').toLowerCase().indexOf(q) !== -1 ||
-      (m.funcao||'').toLowerCase().indexOf(q) !== -1 ||
-      (m.celular||'').indexOf(q) !== -1;
-    if (MB.filtroAtivo === 'ativos')   return ok && m.ativo !== false;
-    if (MB.filtroAtivo === 'inativos') return ok && m.ativo === false;
-    return ok;
-  });
-
   var total    = MB.membros.length;
   var ativos   = MB.membros.filter(function(m){ return m.ativo !== false; }).length;
   var inativos = total - ativos;
   var aniv     = MB.membros.filter(function(m){ return _mbNesteMes(m.nascimento); }).length;
   var semFoto  = MB.membros.filter(function(m){ return !m.foto; }).length;
+  var filtrado = _mbFiltrarLista();
 
   // KPIs
   var kpis =
@@ -706,10 +763,10 @@ function _mbBuildLista() {
 
   // Toolbar
   var toolbar =
-    '<div class="ed-section-header">'+
+    '<div class="ed-section-header" id="mb-lista-header">'+
       '<div>'+
         '<div class="ed-section-title">Todos os Membros</div>'+
-        '<div class="ed-section-sub">'+lista.length+' resultado(s) de '+total+' cadastrado(s)</div>'+
+        '<div class="ed-section-sub" id="mb-lista-sub">'+filtrado.length+' resultado(s) de '+total+' cadastrado(s)</div>'+
       '</div>'+
       '<div style="display:flex;gap:8px;align-items:center">'+
         '<button class="btn btn-primary btn-sm" onclick="mbNovoMembro()">'+
@@ -734,67 +791,169 @@ function _mbBuildLista() {
       '</div>'+
     '</div>';
 
-  // Busca + filtro
+  // Busca + filtro — oninput atualiza SÓ o container da lista, sem recriar o input
   var busca =
     '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
       '<div class="ed-search-wrap" style="flex:1;min-width:180px">'+
         '<span class="ed-search-icon"><i data-lucide="search" style="width:15px;height:15px"></i></span>'+
-        '<input class="ed-search" type="text" placeholder="Buscar nome, ROL, função..." value="'+_mbEsc(MB.search)+'" oninput="MB.search=this.value;_mbRenderPanel()">'+
+        '<input class="ed-search" id="mb-search-input" type="text" placeholder="Buscar nome, ROL, função..." value="'+_mbEsc(MB.search)+'" oninput="_mbOnSearchLista(event)">'+
       '</div>'+
-      '<select class="ed-filter-select" onchange="MB.filtroAtivo=this.value;_mbRenderPanel()">'+
+      '<select class="ed-filter-select" id="mb-filtro-select" onchange="_mbOnFiltroChange(event)">'+
         '<option value="todos"'   +(MB.filtroAtivo==='todos'   ?' selected':'')+'>Todos</option>'+
         '<option value="ativos"'  +(MB.filtroAtivo==='ativos'  ?' selected':'')+'>Ativos</option>'+
         '<option value="inativos"'+(MB.filtroAtivo==='inativos'?' selected':'')+'>Inativos</option>'+
       '</select>'+
     '</div>';
 
-  // Lista
-  var listaHtml;
-  if (!lista.length) {
-    listaHtml =
-      '<div class="mb-empty">'+
-        '<span class="mb-empty-icon">📋</span>'+
-        '<div class="mb-empty-title">'+(total===0?'Nenhum membro cadastrado':'Nenhum resultado encontrado')+'</div>'+
-        '<div class="mb-empty-sub">'+(total===0?'Clique em "Novo Membro" para começar.':'Tente ajustar os filtros ou a busca.')+'</div>'+
-      '</div>';
-  } else {
-    listaHtml = '<div class="ed-list">';
-    lista.forEach(function(m){
-      var ativo   = m.ativo !== false;
-      var bdHoje  = _mbIsHoje(m.nascimento);
-      var inicial = (m.nome||'?')[0].toUpperCase();
-      listaHtml +=
-        '<div class="ed-list-item" onclick="mbVerDetalhe(\''+_mbEsc(m.id)+'\')">'+
-          '<div class="ed-list-avatar">'+
-            (m.foto ? '<img src="'+(MB._fotoCache[m.foto]||'')+'" alt="'+_mbEsc(m.nome)+'" style="transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">' : _mbEsc(inicial))+
-          '</div>'+
-          '<div class="ed-list-info">'+
-            '<div class="ed-list-name">'+
-              _mbEsc(m.nome||'—')+
-              (bdHoje ? ' 🎂' : '')+
-              (!m.foto ? ' <span class="badge badge-purple" style="font-size:9px;padding:1px 6px">SEM FOTO</span>' : '')+
-            '</div>'+
-            '<div class="ed-list-meta">ROL '+_mbEsc(m.rol||'—')+' · '+_mbEsc(m.funcao||'Membro')+' · '+_mbEsc(m.cidade||'')+'/'+_mbEsc(m.estado||'')+'</div>'+
-          '</div>'+
-          '<span class="badge '+(ativo?'badge-green':'badge-red')+'">'+(ativo?'Ativo':'Inativo')+'</span>'+
-          '<div class="ed-aula-actions">'+
-            '<button class="ed-item-btn" onclick="event.stopPropagation();mbEditarMembro(\''+_mbEsc(m.id)+'\')" title="Editar">'+
-              '<i data-lucide="pencil" style="width:13px;height:13px"></i>'+
-            '</button>'+
-          '</div>'+
-        '</div>';
-    });
-    listaHtml += '</div>';
-  }
+  return kpis + toolbar + busca + '<div id="mb-lista-container">'+_mbBuildListaItens(filtrado, total)+'</div>';
+}
 
-  return kpis + toolbar + busca + listaHtml;
+// ── Filtra membros conforme MB.search e MB.filtroAtivo ───
+function _mbFiltrarLista() {
+  return MB.membros.filter(function(m){
+    var q = (MB.search || '').toLowerCase();
+    var ok = !q ||
+      String(m.nome||'').toLowerCase().indexOf(q) !== -1 ||
+      String(m.rol||'').toLowerCase().indexOf(q) !== -1 ||
+      String(m.funcao||'').toLowerCase().indexOf(q) !== -1 ||
+      String(m.celular||'').indexOf(q) !== -1;
+    if (MB.filtroAtivo === 'ativos')   return ok && m.ativo !== false;
+    if (MB.filtroAtivo === 'inativos') return ok && m.ativo === false;
+    return ok;
+  });
+}
+
+// ── Constrói só os itens da lista (sem recriar busca/toolbar) ──
+function _mbBuildListaItens(lista, total) {
+  if (total === undefined) total = MB.membros.length;
+  if (!lista.length) {
+    return '<div class="mb-empty">'+
+      '<span class="mb-empty-icon">📋</span>'+
+      '<div class="mb-empty-title">'+(total===0?'Nenhum membro cadastrado':'Nenhum resultado encontrado')+'</div>'+
+      '<div class="mb-empty-sub">'+(total===0?'Clique em "Novo Membro" para começar.':'Tente ajustar os filtros ou a busca.')+'</div>'+
+    '</div>';
+  }
+  var html = '<div class="ed-list">';
+  lista.forEach(function(m){
+    var ativo   = m.ativo !== false;
+    var bdHoje  = _mbIsHoje(m.nascimento);
+    var inicial = (m.nome||'?')[0].toUpperCase();
+    html +=
+      '<div class="ed-list-item" onclick="mbVerDetalhe(\''+_mbEsc(m.id)+'\')">'+
+        '<div class="ed-list-avatar">'+
+          (m.foto ? '<img src="'+(MB._fotoCache[m.foto]||'')+'" alt="'+_mbEsc(m.nome)+'" style="transform:scale('+(m.fotoZoom||1)+');object-position:'+(m.fotoX||50)+'% '+(m.fotoY||50)+'%">' : _mbEsc(inicial))+
+        '</div>'+
+        '<div class="ed-list-info">'+
+          '<div class="ed-list-name">'+
+            _mbEsc(m.nome||'—')+
+            (bdHoje ? ' 🎂' : '')+
+            (!m.foto ? ' <span class="badge badge-purple" style="font-size:9px;padding:1px 6px">SEM FOTO</span>' : '')+
+          '</div>'+
+          '<div class="ed-list-meta">ROL '+_mbEsc(m.rol||'—')+' · '+_mbEsc(m.funcao||'Membro')+' · '+_mbEsc(m.cidade||'')+'/'+_mbEsc(m.estado||'')+'</div>'+
+        '</div>'+
+        '<span class="badge '+(ativo?'badge-green':'badge-red')+'">'+(ativo?'Ativo':'Inativo')+'</span>'+
+        '<div class="ed-aula-actions">'+
+          '<button class="ed-item-btn" onclick="event.stopPropagation();mbEditarMembro(\''+_mbEsc(m.id)+'\')" title="Editar">'+
+            '<i data-lucide="pencil" style="width:13px;height:13px"></i>'+
+          '</button>'+
+        '</div>'+
+      '</div>';
+  });
+  return html + '</div>';
+}
+
+// ── Filtra em realtime sem recriar o input ───────────────
+function mbAtualizarLista() {
+  var filtrado  = _mbFiltrarLista();
+  var container = document.getElementById('mb-lista-container');
+  var sub       = document.getElementById('mb-lista-sub');
+  if (container) {
+    container.innerHTML = _mbBuildListaItens(filtrado, MB.membros.length);
+    if (window.lucide) lucide.createIcons();
+  }
+  if (sub) sub.textContent = filtrado.length+' resultado(s) de '+MB.membros.length+' cadastrado(s)';
+}
+
+function mbAtualizarCardLista() {
+  var ativos = MB.membros.filter(function(m){ return m.ativo !== false; });
+  var q = (MB.cardSearch||'').toLowerCase();
+  var filtrados = ativos.filter(function(m){
+    return !q || (m.nome||'').toLowerCase().indexOf(q)!==-1 || String(m.rol||'').indexOf(q)!==-1;
+  });
+  var grid = document.getElementById('mb-lote-grid');
+  if (!grid) return;
+  var html = '';
+  filtrados.forEach(function(m){
+    var sel      = !!(MB.cardSelecionados && MB.cardSelecionados[m.id]);
+    var isActive = String(m.id) === String(MB.cardSelected);
+    html +=
+      '<div class="mb-lote-item'+(sel?' selected':'')+(isActive?' mb-lote-item-active':'')+'" id="lote-item-'+m.id+'">'+
+        '<div class="mb-lote-check" onclick="event.stopPropagation();mbCard_toggleSel(\''+m.id+'\')">'+
+          (sel?'✓':'')+
+        '</div>'+
+        '<div class="ed-list-avatar" onclick="mbCard_selecionarPreview(\''+m.id+'\')" style="cursor:pointer">'+
+          (m.foto?'<img src="'+(MB._fotoCache[m.foto]||'')+'" style="width:100%;height:100%;object-fit:cover">':((m.nome||'?')[0].toUpperCase()))+
+        '</div>'+
+        '<div style="flex:1;min-width:0;cursor:pointer" onclick="mbCard_selecionarPreview(\''+m.id+'\')">'+
+          '<div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(m.nome||'—')+'</div>'+
+          '<div style="font-size:10px;color:var(--text-muted)">ROL '+m.rol+' · '+(m.funcao||'Membro')+'</div>'+
+        '</div>'+
+        '<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px;flex-shrink:0" onclick="event.stopPropagation();mbCard_downloadPDF(\''+m.id+'\')" title="PDF Carteirinha">'+
+          '<i data-lucide="file-down" style="width:13px;height:13px"></i> PDF'+
+        '</button>'+
+      '</div>';
+  });
+  grid.innerHTML = html || '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text-muted)">Nenhum resultado.</div>';
+  if (window.lucide) lucide.createIcons();
 }
 
 function _mbKpi(klass, icon, val, label) {
-  return '<div class="ed-stat-card '+klass+'">'+
-    '<div class="ed-stat-icon-wrap"><i data-lucide="'+icon+'" class="ed-stat-icon"></i></div>'+
-    '<div><div class="ed-stat-value">'+val+'</div><div class="ed-stat-label">'+label+'</div></div>'+
+  var tag    = label.split(' ')[0];
+  var isHero = klass === 'kpi-total';
+  var id     = 'mbkv-' + klass;
+  var spark  = isHero ? _mbSparkline([val, val, val, val, val]) : '';
+  return '<div class="ed-stat-card '+klass+(isHero?' kpi-hero':'')+'">'+
+    '<div class="ed-stat-top">'+
+      '<div class="ed-stat-dot"></div>'+
+      '<span class="ed-stat-tag">'+tag+'</span>'+
+    '</div>'+
+    '<div class="ed-stat-value" id="'+id+'">'+val+'</div>'+
+    '<div class="ed-stat-label">'+label+'</div>'+
+    spark+
+    '<div class="ed-stat-ghost"><i data-lucide="'+icon+'" style="width:80px;height:80px"></i></div>'+
   '</div>';
+}
+
+function _mbSparkline(pts) {
+  var w = 80, h = 28, pad = 3;
+  var mn = Math.min.apply(null,pts), mx = Math.max.apply(null,pts);
+  var rng = mx - mn || 1;
+  var xs = pts.map(function(_,i){ return pad + i*(w-2*pad)/(pts.length-1); });
+  var ys = pts.map(function(v){ return (h-pad) - (v-mn)/rng*(h-2*pad); });
+  var d  = 'M'+xs[0]+','+ys[0]+xs.slice(1).map(function(x,i){ return 'L'+x+','+ys[i+1]; }).join('');
+  return '<div class="ed-stat-sparkline">'+
+    '<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'+
+      '<path d="'+d+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<circle cx="'+xs[xs.length-1]+'" cy="'+ys[ys.length-1]+'" r="2.5" fill="currentColor"/>'+
+    '</svg>'+
+  '</div>';
+}
+
+function _mbAnimKpis() {
+  var els = document.querySelectorAll('[id^="mbkv-"]');
+  els.forEach(function(el) {
+    var target = parseFloat(el.textContent) || 0;
+    if (!target || target < 2) return;
+    var start = 0, dur = 600, t0 = performance.now();
+    function step(now) {
+      var p = Math.min((now - t0) / dur, 1);
+      var ease = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      el.textContent = Math.round(ease * target);
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(step);
+  });
 }
 
 function _mbBuildAniversariantes() {
@@ -2166,7 +2325,7 @@ function _mbBuildCarteirinha() {
       '</div>'+
       '<div class="ed-search-wrap" style="margin-bottom:10px">'+
         '<span class="ed-search-icon"><i data-lucide="search" style="width:15px;height:15px"></i></span>'+
-        '<input class="ed-search" type="text" placeholder="Buscar membro..." value="'+_mbEsc(MB.cardSearch||'')+'" oninput="MB.cardSearch=this.value;_mbRenderPanel()">'+
+        '<input class="ed-search" id="mb-card-search-input" type="text" placeholder="Buscar membro..." value="'+_mbEsc(MB.cardSearch||'')+'" oninput="_mbOnSearchCard(event)">'+
       '</div>'+
       '<div class="mb-lote-grid" id="mb-lote-grid">'+itens+'</div>'+
     '</div>';

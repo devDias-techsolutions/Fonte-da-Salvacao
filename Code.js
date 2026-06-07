@@ -44,18 +44,56 @@ try {
 }
 
 // ── ENTRY POINT ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  doGet — Roteador principal do GAS Web App
+//
+//  Suporta dois cenários de URL:
+//    1) Link de recuperação de senha:
+//       ?view=recuperar-senha&token=TOKEN
+//    2) Acesso normal:
+//       (sem parâmetros)
+//
+//  O template index.html lê as variáveis <?= recovToken ?>
+//  e <?= view ?> injetadas aqui.
+// ═══════════════════════════════════════════════════════════
 function doGet(e) {
-  var view  = (e && e.parameter && e.parameter.view)  ? e.parameter.view  : 'login';
-  var token = (e && e.parameter && e.parameter.token) ? e.parameter.token : '';
-  var publicViews = ['login', 'primeiro-acesso', 'recuperar-senha'];
-  var template = HtmlService.createTemplateFromFile('index');
-  template.view         = view;
-  template.recovToken   = token;
-  template.isPublicView = publicViews.indexOf(view) !== -1;
-  return template.evaluate()
-    .setTitle('AD Fonte da Salvação')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+  var params     = e && e.parameter ? e.parameter : {};
+  var view       = params.view  || '';
+  var recovToken = params.token || '';
+
+  var tmpl = HtmlService.createTemplateFromFile('index');
+
+  // Injeta no template — o JS do index.html lê com <?= recovToken ?> e <?= view ?>
+  tmpl.recovToken = recovToken;
+  tmpl.view       = view;
+
+  return tmpl.evaluate()
+    .setTitle('AD Fonte da Salvação — Gestão Ministerial')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  getSession — Valida token de sessão
+//  NUNCA lança exceção — sempre retorna Util.ok ou Util.err
+//  para evitar res=null no frontend.
+// ═══════════════════════════════════════════════════════════
+function getSession(token) {
+  try {
+    if (!token) return Util.err('Token ausente.');
+    var sessao = Auth._auth(token); // lança se inválido
+    return Util.ok({
+      token:          token,
+      id:             sessao.id,
+      nome:           sessao.nome,
+      email:          sessao.email,
+      perfil:         sessao.perfil,
+      primeiroAcesso: sessao.primeiroAcesso || false
+    });
+  } catch(e) {
+    // Retorna erro estruturado — jamais lança para o frontend
+    return Util.err(e.message || 'Sessão inválida.');
+  }
 }
 
 // ── INCLUDE HELPER ───────────────────────────────────────────
@@ -246,4 +284,123 @@ function _pingDriveWrite() {
   var f = folder.createFile('_ping_test.txt', 'ok', MimeType.PLAIN_TEXT);
   f.setTrashed(true);
   Logger.log('Escrita no Drive OK');
+}
+
+
+
+
+// ═══════════════════════════════════════════════════════════
+//  Auth — Recuperação de Senha
+//  Cole estas funções no seu Auth.gs (ou Code.gs).
+//
+//  Tabela "Usuarios" — colunas usadas:
+//    TokenRecupSenha, ExpirToken, SenhaHash, PrimeiroAcesso
+//
+//  CORREÇÃO CRÍTICA: o link do e-mail DEVE ter o formato:
+//    APP_URL?view=recuperar-senha&token=TOKEN
+//  O parâmetro "view" é lido pelo doGet e injetado no template.
+// ═══════════════════════════════════════════════════════════
+
+var RECUP_TTL_MINUTES = 60; // token expira em 60 minutos
+
+// ── SOLICITAR RECUPERAÇÃO ─────────────────────────────────
+// Chamado pelo frontend sem autenticação.
+// Retorna sempre success:true (não revela se e-mail existe).
+function solicitarRecuperacao(email) {
+  try {
+    email = (email || '').toLowerCase().trim();
+    if (!Util.isValidEmail(email)) return Util.err('E-mail inválido.');
+
+    var user = Util.findRow('Usuarios', 'Email', email);
+
+    // Responde success mesmo se não encontrar (segurança anti-enumeração)
+    if (!user || !user.Ativo) return Util.ok(true);
+
+    var token  = Util.randomToken();
+    var expira = new Date(Date.now() + RECUP_TTL_MINUTES * 60 * 1000).toISOString();
+
+    // Salvar token na planilha
+    var changes = { TokenRecupSenha: token, ExpirToken: expira };
+    var updated = {};
+    Object.keys(user).forEach(function(k) { updated[k] = user[k]; });
+    Object.keys(changes).forEach(function(k) { updated[k] = changes[k]; });
+    Util.updateRow('Usuarios', user._rowIndex, updated);
+
+    // ── LINK CORRETO: inclui view=recuperar-senha ──────────
+    var appUrl = ScriptApp.getService().getUrl();
+    var link   = appUrl + '?view=recuperar-senha&token=' + token;
+    // ──────────────────────────────────────────────────────
+
+    GmailApp.sendEmail(email, '[AD Fonte da Salvação] Redefinição de senha', '', {
+      htmlBody:
+        '<div style="font-family:sans-serif;max-width:480px;margin:auto">' +
+        '<h2 style="color:#1C353A">Redefinição de Senha</h2>' +
+        '<p>Olá, <strong>' + user.Nome + '</strong>!</p>' +
+        '<p>Recebemos uma solicitação de redefinição de senha. Clique no botão abaixo para criar uma nova senha.</p>' +
+        '<p style="text-align:center;margin:28px 0">' +
+          '<a href="' + link + '" style="display:inline-block;background:#00A99C;color:#fff;' +
+          'padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold">' +
+          'Redefinir senha</a>' +
+        '</p>' +
+        '<p style="color:#888;font-size:12px">Este link expira em ' + RECUP_TTL_MINUTES + ' minutos.<br>' +
+        'Se você não solicitou a redefinição, ignore este e-mail.</p>' +
+        '<p style="color:#aaa;font-size:11px">AD Fonte da Salvação — Gestão Ministerial</p>' +
+        '</div>'
+    });
+
+    return Util.ok(true);
+  } catch(e) {
+    Logger.log('[solicitarRecuperacao] ' + e.message);
+    return Util.ok(true); // nunca revela o erro real ao frontend
+  }
+}
+
+// ── VERIFICAR TOKEN ───────────────────────────────────────
+// Chamado pelo frontend ao carregar a tela de redefinição.
+// Retorna { nome } se válido para exibir "Olá, Nome".
+function verificarTokenRecuperacao(token) {
+  try {
+    if (!token) return Util.err('Token ausente.');
+
+    var user = Util.findRow('Usuarios', 'TokenRecupSenha', token);
+    if (!user) return Util.err('Link inválido ou já utilizado.');
+
+    var expira = user.ExpirToken ? new Date(user.ExpirToken) : null;
+    if (!expira || isNaN(expira) || Date.now() > expira.getTime()) {
+      return Util.err('Este link expirou. Solicite um novo.');
+    }
+
+    return Util.ok({ nome: user.Nome });
+  } catch(e) {
+    return Util.err('Erro ao verificar link: ' + e.message);
+  }
+}
+
+// ── REDEFINIR SENHA VIA TOKEN ─────────────────────────────
+// Chamado pelo frontend com o hash da nova senha.
+function redefinirSenhaToken(token, hashNova) {
+  try {
+    if (!token || !hashNova) return Util.err('Dados incompletos.');
+
+    var user = Util.findRow('Usuarios', 'TokenRecupSenha', token);
+    if (!user) return Util.err('Link inválido ou já utilizado.');
+
+    var expira = user.ExpirToken ? new Date(user.ExpirToken) : null;
+    if (!expira || isNaN(expira) || Date.now() > expira.getTime()) {
+      return Util.err('Este link expirou. Solicite um novo.');
+    }
+
+    // Atualizar senha e invalidar token
+    var updated = {};
+    Object.keys(user).forEach(function(k) { updated[k] = user[k]; });
+    updated.SenhaHash       = hashNova;
+    updated.TokenRecupSenha = '';   // invalida o token — uso único
+    updated.ExpirToken      = '';
+    updated.PrimeiroAcesso  = false;
+    Util.updateRow('Usuarios', user._rowIndex, updated);
+
+    return Util.ok(true);
+  } catch(e) {
+    return Util.err('Erro ao redefinir senha: ' + e.message);
+  }
 }

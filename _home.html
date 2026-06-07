@@ -339,8 +339,8 @@ function renderHome() {
             '<i data-lucide=\"moon\" style=\"width:17px;height:17px\"></i>' +
           '</button>' +
           '<div class=\"topnav-sep\"></div>' +
-          (isSec ? '<button class=\"topnav-icon-btn\" onclick=\"navigateTo(\'usuarios\')\" title=\"Gerenciar Usuários\" style=\"display:flex;align-items:center;gap:5px;padding:0 10px;font-size:12px;font-weight:700;color:var(--text-muted)\">' +
-            '<i data-lucide=\"shield-check\" style=\"width:16px;height:16px;color:var(--teal)\"></i>' +
+          (isSec ? '<button onclick=\"navigateTo(\'usuarios\')\" title=\"Gerenciar Usuários\" style=\"display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:100px;border:1.5px solid var(--teal-border);background:var(--teal-dim);color:var(--text);font-family:\'Plus Jakarta Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:.1px\">' +
+            '<i data-lucide=\"shield-check\" style=\"width:15px;height:15px;color:var(--teal);flex-shrink:0\"></i>' +
             '<span class=\"home-usr-label\">Usuários</span>' +
           '</button>' : '') +
           '<div class=\"topnav-avatar-wrap\">' +
@@ -788,11 +788,11 @@ function handleTrocarSenha() {
     google.script.run
       .withSuccessHandler(function(res) {
         setBtnLoading(btn, false);
-        if (res.success) {
+        if (res && res.success) {
           closeModalTrocarSenha();
           showToast('Senha alterada com sucesso! ✓', 'success');
         } else {
-          errTxt.textContent = res.error;
+          errTxt.textContent = (res && res.error) ? res.error : 'Erro inesperado.';
           errBox.classList.add('visible');
         }
       })

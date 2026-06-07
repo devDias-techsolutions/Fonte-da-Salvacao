@@ -950,7 +950,7 @@ function initApp() {
   if (savedToken) {
     google.script.run
       .withSuccessHandler(function(res) {
-        if (res.success) {
+        if (res && res.success) {
           App.session = res.data;
           if (res.data.primeiroAcesso) {
             navigateTo('primeiro-acesso');

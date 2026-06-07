@@ -367,7 +367,7 @@ function handleLogin() {
     google.script.run
       .withSuccessHandler(function(res) {
         setBtnLoading(btn, false);
-        if (res.success) {
+        if (res && res.success) {
           saveSession(res.data);
           if (res.data.primeiroAcesso) {
             navigateTo('primeiro-acesso');
@@ -375,7 +375,7 @@ function handleLogin() {
             navigateTo('home');
           }
         } else {
-          errTxt.textContent = res.error;
+          errTxt.textContent = (res && res.error) ? res.error : 'Erro inesperado. Tente novamente.';
           errBox.classList.add('visible');
           senhaEl.value = '';
           senhaEl.focus();

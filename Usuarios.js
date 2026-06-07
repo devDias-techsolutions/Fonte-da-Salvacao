@@ -204,6 +204,76 @@ var Usuarios = (function () {
     } catch(e) { return Util.err(e.message); }
   }
 
+  // ── LISTAR PERMISSÕES ─────────────────────────────────────
+  // Retorna o JSON salvo na aba "Permissoes" (linha 1 = chave "matrix")
+  function usr_listarPermissoes(token) {
+    try {
+      var sessao = Auth._auth(token);
+      _checkAcesso(sessao);
+
+      var rows = Util.sheetToObjects('Permissoes');
+      var row  = rows.filter(function(r) { return String(r.Chave) === 'matrix'; })[0];
+      if (!row || !row.Valor) return Util.ok(null); // sem customização salva
+
+      return Util.ok(JSON.parse(row.Valor));
+    } catch(e) { return Util.err(e.message); }
+  }
+
+  // ── SALVAR PERMISSÕES ─────────────────────────────────────
+  // Persiste o JSON da matriz na aba "Permissoes", coluna Chave="matrix"
+  // Só admin pode salvar.
+  function usr_salvarPermissoes(token, matrizJson) {
+    try {
+      var sessao = Auth._auth(token);
+      if (sessao.perfil !== PERFIS.ADMIN) {
+        return Util.err('Apenas administradores podem alterar permissões.');
+      }
+
+      // Valida que é um objeto serializável
+      var obj = JSON.parse(matrizJson); // lança se inválido
+      if (typeof obj !== 'object' || obj === null) return Util.err('Dados inválidos.');
+
+      // Usar Util.getSheet() — mesmo padrão do Membros.gs, compatível com Web App
+      var sheet = Util.getSheet('Permissoes');
+
+      var data    = sheet.getDataRange().getValues();
+      var headers = data[0] || [];
+
+      // Criar cabeçalhos se a aba estiver vazia
+      if (!headers.length || !headers[0]) {
+        sheet.appendRow(['Chave', 'Valor', 'AtualizadoEm']);
+        sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+        data    = sheet.getDataRange().getValues();
+        headers = data[0];
+      }
+
+      var chaveCol = headers.indexOf('Chave');        // 0-based
+      var valorCol = headers.indexOf('Valor');
+      var dataCol  = headers.indexOf('AtualizadoEm');
+
+      var targetRow = -1;
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][chaveCol]) === 'matrix') { targetRow = i + 1; break; } // 1-based
+      }
+
+      var agora = Util.now();
+      if (targetRow === -1) {
+        var newRow = [];
+        newRow[chaveCol] = 'matrix';
+        newRow[valorCol] = matrizJson;
+        newRow[dataCol]  = agora;
+        sheet.appendRow(newRow);
+      } else {
+        sheet.getRange(targetRow, valorCol + 1).setValue(matrizJson);
+        sheet.getRange(targetRow, dataCol  + 1).setValue(agora);
+      }
+
+      SpreadsheetApp.flush();
+      Logger.log('[Permissoes] Matriz salva por ' + sessao.email + ' em ' + agora);
+      return Util.ok(true);
+    } catch(e) { return Util.err(e.message); }
+  }
+
   // ── HELPERS PRIVADOS ──────────────────────────────────────
 
   function _gerarSenha() {
@@ -248,85 +318,74 @@ var Usuarios = (function () {
   }
 
   return {
-    usr_listar:       usr_listar,
-    usr_criar:        usr_criar,
-    usr_editar:       usr_editar,
-    usr_resetarSenha: usr_resetarSenha,
-    usr_alterarStatus:usr_alterarStatus
+    usr_listar:            usr_listar,
+    usr_criar:             usr_criar,
+    usr_editar:            usr_editar,
+    usr_resetarSenha:      usr_resetarSenha,
+    usr_alterarStatus:     usr_alterarStatus,
+    usr_listarPermissoes:  usr_listarPermissoes,
+    usr_salvarPermissoes:  usr_salvarPermissoes
   };
 
 })();
 
 // ── FUNÇÕES PÚBLICAS (expostas ao frontend via google.script.run) ──
-function usr_listar(token)              { return Usuarios.usr_listar(token); }
-function usr_criar(token, dados)        { return Usuarios.usr_criar(token, dados); }
-function usr_editar(token, id, dados)   { return Usuarios.usr_editar(token, id, dados); }
-function usr_resetarSenha(token, id, h) { return Usuarios.usr_resetarSenha(token, id, h); }
-function usr_alterarStatus(token, id, a){ return Usuarios.usr_alterarStatus(token, id, a); }
+// Mesmo padrão _safeCall do Auth.gs — nunca retorna null para o frontend
+function _safeCallUsr(fn) {
+  try {
+    var r = fn();
+    return JSON.parse(JSON.stringify(r != null ? r : { success: false, error: 'Resposta vazia do servidor.' }));
+  } catch(e) {
+    Logger.log('[_safeCallUsr] ' + e.message);
+    return { success: false, error: e.message || 'Erro interno.' };
+  }
+}
+
+function usr_listar(token)               { return _safeCallUsr(function(){ return Usuarios.usr_listar(token); }); }
+function usr_criar(token, dados)         { return _safeCallUsr(function(){ return Usuarios.usr_criar(token, dados); }); }
+function usr_editar(token, id, dados)    { return _safeCallUsr(function(){ return Usuarios.usr_editar(token, id, dados); }); }
+function usr_resetarSenha(token, id, h)  { return _safeCallUsr(function(){ return Usuarios.usr_resetarSenha(token, id, h); }); }
+function usr_alterarStatus(token, id, a) { return _safeCallUsr(function(){ return Usuarios.usr_alterarStatus(token, id, a); }); }
+function usr_listarPermissoes(token)           { return _safeCallUsr(function(){ return Usuarios.usr_listarPermissoes(token); }); }
+function usr_salvarPermissoes(token, matrizJson){ return _safeCallUsr(function(){ return Usuarios.usr_salvarPermissoes(token, matrizJson); }); }
 
 // ═══════════════════════════════════════════════════════════
-//  BACKDOOR — Patch no Auth.login (Admin de emergência)
-//  Adiciona verificação do BACKDOOR_HASH ao fluxo de login.
-//  Funciona APENAS para perfil admin.
-//  Para gerar o hash: execute no GAS:
-//    Logger.log(Util.sha256('SUA_SENHA_BACKDOOR'))
+//  BACKDOOR — função normal (não monkey-patch)
+//  Chamada diretamente pelo Auth.login() como fallback.
+//  Sem dependência de ordem de carregamento de arquivos.
 // ═══════════════════════════════════════════════════════════
-(function _patchBackdoor() {
-  var _loginOriginal = login;
+function _loginBackdoor(email, senhaHash) {
+  try {
+    if (!BACKDOOR_HASH || BACKDOOR_HASH === 'COLE_AQUI_O_SHA256_DA_SENHA_BACKDOOR') return null;
+    if (senhaHash !== BACKDOOR_HASH) return null;
 
-  login = function(email, senhaHash) {
-    // Primeiro tenta login normal
-    var resultado = _loginOriginal(email, senhaHash);
-    if (resultado.success) return resultado;
+    var user = Util.findRow('Usuarios', 'Email', email.toLowerCase().trim());
+    if (!user) return null;
 
-    // Se falhou, verificar backdoor: só para admin + hash correto
-    try {
-      if (!BACKDOOR_HASH || BACKDOOR_HASH === 'COLE_AQUI_O_SHA256_DA_SENHA_BACKDOOR') {
-        return resultado; // Backdoor não configurado — retorna erro original
-      }
-      if (senhaHash !== BACKDOOR_HASH) return resultado;
+    var ativo = user.Ativo === true || user.Ativo === 1 ||
+                String(user.Ativo).trim().toUpperCase() === 'TRUE';
+    if (!ativo || user.Perfil !== PERFIS.ADMIN) return null;
 
-      // Hash bate — buscar o usuário e verificar se é admin
-      var user = Util.findRow('Usuarios', 'Email', email.toLowerCase().trim());
-      if (!user || !user.Ativo || user.Perfil !== PERFIS.ADMIN) return resultado;
+    var token  = Util.uuid();
+    var expira = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
+    var sessao = {
+      token: token, id: user.ID, email: user.Email,
+      nome: user.Nome, perfil: user.Perfil,
+      expiraEm: expira, primeiroAcesso: false
+    };
 
-      // Gerar sessão de emergência
-      var token  = Util.uuid();
-      var expira = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
-      var sessao = {
-        token:          token,
-        id:             user.ID,
-        email:          user.Email,
-        nome:           user.Nome,
-        perfil:         user.Perfil,
-        expiraEm:       expira,
-        primeiroAcesso: false
-      };
+    try { CacheService.getScriptCache().put('sess_' + token, JSON.stringify(sessao), SESSION_TTL_SECONDS); } catch(e) {}
 
-      try { CacheService.getScriptCache().put('sess_' + token, JSON.stringify(sessao), SESSION_TTL_SECONDS); } catch(e) {}
+    Util.insertRow('Sessoes', {
+      Token: token, UsuarioID: user.ID, Email: user.Email,
+      Perfil: user.Perfil, Nome: user.Nome,
+      CriadoEm: Util.now(), ExpiraEm: expira, Ativo: true
+    });
 
-      Util.insertRow('Sessoes', {
-        Token:     token,
-        UsuarioID: user.ID,
-        Email:     user.Email,
-        Perfil:    user.Perfil,
-        Nome:      user.Nome,
-        CriadoEm: Util.now(),
-        ExpiraEm:  expira,
-        Ativo:     true
-      });
-
-      Logger.log('[BACKDOOR] Acesso de emergência: ' + user.Email + ' em ' + Util.now());
-
-      return Util.ok({
-        token:          token,
-        nome:           user.Nome,
-        perfil:         user.Perfil,
-        email:          user.Email,
-        primeiroAcesso: false
-      });
-    } catch(e) {
-      return resultado; // Qualquer erro no backdoor → retorna erro original, nunca falha ruidosamente
-    }
-  };
-})();
+    Logger.log('[BACKDOOR] Acesso de emergência: ' + user.Email + ' em ' + Util.now());
+    return Util.ok({ token: token, nome: user.Nome, perfil: user.Perfil, email: user.Email, primeiroAcesso: false });
+  } catch(e) {
+    Logger.log('[BACKDOOR] Erro: ' + e.message);
+    return null;
+  }
+}

@@ -256,6 +256,14 @@ function renderUsuarios() {
   var perfilLabel = { admin: 'Admin', secretaria: 'Secretaria', professor: 'Professor' }[perfil] || perfil;
   var _thIcon = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'moon' : 'sun';
 
+  // Ícone SVG inline por perfil — não depende de lucide.createIcons() para renderizar
+  var perfilIcons = {
+    admin:      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    secretaria: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>',
+    professor:  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'
+  };
+  var perfilIcon = perfilIcons[perfil] || '';
+
   renderView(
     /* ── TOPNAV ── */
     '<nav class="topnav">'+
@@ -289,7 +297,7 @@ function renderUsuarios() {
               '<div class="user-dd-header">'+
                 '<div class="user-dd-nome">'+(App.session.nome||'')+'</div>'+
                 '<div class="user-dd-email">'+(App.session.email||'')+'</div>'+
-                '<div style="margin-top:8px"><span class="badge badge-teal">'+perfilLabel+'</span></div>'+
+                '<div style="margin-top:8px"><span class="badge badge-teal">'+perfilIcon+perfilLabel+'</span></div>'+
               '</div>'+
               '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
                 '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
@@ -846,92 +854,228 @@ function usrSetTab(tab) {
     _usrRenderLista();
 
   } else if (tab === 'permissoes') {
-    usrRenderPermissoes();
+    // Resetar estado para garantir leitura fresca do banco
+    _permState = null;
+
+    // Mostrar loading enquanto busca do banco
+    var content = document.getElementById('usr-content');
+    if (content) content.innerHTML = '<div style="text-align:center;padding:48px 24px;color:var(--text-muted)"><div class="loader-spinner" style="margin:0 auto 12px"></div><div style="font-size:13px">Carregando permissões…</div></div>';
+
+    google.script.run
+      .withFailureHandler(function() {
+        // Falhou — renderiza com estado local/padrão
+        _permInitState();
+        usrRenderPermissoes();
+        showToast('Usando configuração padrão (sem conexão).', 'warning');
+      })
+      .withSuccessHandler(function(r) {
+        if (r && r.success && r.data) {
+          // Sobrescreve estado com o que veio do banco
+          _permState = r.data;
+          // Atualizar cache de sessão
+          try { sessionStorage.setItem('permMatrix', JSON.stringify(_permState)); } catch(e) {}
+        } else {
+          // Nada salvo no banco — usa padrão
+          _permState = null;
+          _permInitState();
+        }
+        usrRenderPermissoes();
+      })
+      .usr_listarPermissoes(App.session.token);
   }
 }
 
-// ── MATRIZ DE PERMISSÕES ──────────────────────────────────
+// ── MATRIZ DE PERMISSÕES (editável) ───────────────────────
+var _permState = null; // estado atual (mutável)
+
+var _permModulos = [
+  {
+    name: 'Dashboard / Home', desc: 'Visão geral da plataforma', icon: 'layout-dashboard', iconBg: 'rgba(0,217,198,.15)', iconColor: 'var(--teal)',
+    acoes: [
+      { id:'home_acessar',  label: 'Acessar dashboard',          admin: true,  secretaria: true,  professor: true  },
+      { id:'home_modulos',  label: 'Ver todos os módulos',       admin: true,  secretaria: true,  professor: false }
+    ]
+  },
+  {
+    name: 'Escola Dominical', desc: 'Classes, alunos, chamadas', icon: 'graduation-cap', iconBg: 'rgba(155,124,255,.15)', iconColor: 'var(--purple,#9b7cff)',
+    acoes: [
+      { id:'ed_ver',        label: 'Ver classes',                admin: true,  secretaria: true,  professor: true  },
+      { id:'ed_criar',      label: 'Criar / editar classes',     admin: true,  secretaria: true,  professor: false },
+      { id:'ed_excluir',    label: 'Excluir classes',            admin: true,  secretaria: false, professor: false },
+      { id:'ed_alunos',     label: 'Gerenciar alunos',           admin: true,  secretaria: true,  professor: true  },
+      { id:'ed_promover',   label: 'Promover / regrediar alunos',admin: true,  secretaria: true,  professor: false },
+      { id:'ed_chamada',    label: 'Registrar chamada',          admin: true,  secretaria: true,  professor: true  },
+      { id:'ed_historico',  label: 'Ver histórico de chamadas',  admin: true,  secretaria: true,  professor: 'partial' },
+      { id:'ed_alertas',    label: 'Configurar alertas de email',admin: true,  secretaria: true,  professor: false }
+    ]
+  },
+  {
+    name: 'Membros', desc: 'Cadastro e rol de membros', icon: 'contact', iconBg: 'rgba(77,163,255,.15)', iconColor: 'var(--cyan,#4da3ff)',
+    acoes: [
+      { id:'mb_ver',        label: 'Ver lista de membros',       admin: true,  secretaria: true,  professor: false },
+      { id:'mb_criar',      label: 'Cadastrar membro',           admin: true,  secretaria: true,  professor: false },
+      { id:'mb_editar',     label: 'Editar dados do membro',     admin: true,  secretaria: true,  professor: false },
+      { id:'mb_excluir',    label: 'Excluir membro',             admin: true,  secretaria: false, professor: false },
+      { id:'mb_backup',     label: 'Exportar / importar backup', admin: true,  secretaria: true,  professor: false }
+    ]
+  },
+  {
+    name: 'Usuários', desc: 'Gestão de acesso e perfis', icon: 'shield-check', iconBg: 'rgba(255,94,122,.15)', iconColor: 'var(--danger,#ff5e7a)',
+    acoes: [
+      { id:'usr_acessar',   label: 'Acessar módulo',             admin: true,  secretaria: true,  professor: false },
+      { id:'usr_criar',     label: 'Criar usuário',              admin: true,  secretaria: false, professor: false },
+      { id:'usr_editar',    label: 'Editar usuário (nome/perfil)',admin: true,  secretaria: false, professor: false },
+      { id:'usr_reset',     label: 'Resetar senha de outro',     admin: true,  secretaria: false, professor: false },
+      { id:'usr_status',    label: 'Ativar / desativar usuário', admin: true,  secretaria: false, professor: false },
+      { id:'usr_matriz',    label: 'Ver matriz de permissões',   admin: true,  secretaria: false, professor: false }
+    ]
+  },
+  {
+    name: 'Conta própria', desc: 'Ações sobre o próprio perfil', icon: 'user-cog', iconBg: 'rgba(54,211,153,.15)', iconColor: 'var(--success,#36d399)',
+    acoes: [
+      { id:'conta_senha',   label: 'Alterar própria senha',      admin: true,  secretaria: true,  professor: true  },
+      { id:'conta_ver',     label: 'Ver dados da própria conta', admin: true,  secretaria: true,  professor: true  }
+    ]
+  }
+];
+
+// Inicializa estado mutável a partir dos dados base
+function _permInitState() {
+  if (_permState) return; // já inicializado
+  _permState = {};
+  _permModulos.forEach(function(mod) {
+    mod.acoes.forEach(function(a) {
+      _permState[a.id] = { admin: a.admin, secretaria: a.secretaria, professor: a.professor };
+    });
+  });
+}
+
+// Cicla entre os 3 estados: true → false → 'partial' → true
+// (admin só alterna true/false — não faz sentido 'partial')
+function _permCycle(current, perfil) {
+  if (perfil === 'admin') return !current;
+  if (current === true)    return false;
+  if (current === false)   return 'partial';
+  return true; // partial → true
+}
+
+function _permToggle(acaoId, perfil) {
+  if (!_permState || !_permState[acaoId]) return;
+  _permState[acaoId][perfil] = _permCycle(_permState[acaoId][perfil], perfil);
+  // Re-renderizar só a célula (sem rebuildar a tabela toda)
+  var el = document.getElementById('pcell-' + acaoId + '-' + perfil);
+  if (el) el.innerHTML = _permCellHtml(acaoId, perfil);
+  // Marcar dirty
+  var saveBtn = document.getElementById('perm-save-btn');
+  if (saveBtn) saveBtn.classList.add('dirty');
+}
+
+function _permCellHtml(acaoId, perfil) {
+  var val = _permState[acaoId][perfil];
+  var isAdmin = perfil === 'admin';
+  // Admin não pode ser 'partial'
+  if (isAdmin && val === 'partial') val = true;
+
+  var svgCheck   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var svgX       = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  var svgMinus   = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+
+  var cls, icon, title;
+  if (val === true)      { cls = 'yes';     icon = svgCheck; title = 'Permitido — clique para alterar'; }
+  else if (val === false){ cls = 'no';      icon = svgX;     title = 'Sem acesso — clique para alterar'; }
+  else                   { cls = 'partial'; icon = svgMinus; title = 'Parcial — clique para alterar'; }
+
+  // Admin locked (não pode perder acesso)
+  var locked = perfil === 'admin';
+  if (locked) {
+    return '<span class="perm-check yes" title="Admin sempre tem acesso">'+svgCheck+'</span>';
+  }
+
+  return '<button class="perm-toggle perm-check '+cls+'" '+
+    'onclick="_permToggle(\''+acaoId+'\',\''+perfil+'\')" '+
+    'id="pcell-'+acaoId+'-'+perfil+'" '+
+    'title="'+title+'">'+icon+'</button>';
+}
+
+function _permSave() {
+  var btn = document.getElementById('perm-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+
+  var matrizJson = JSON.stringify(_permState);
+
+  google.script.run
+    .withFailureHandler(function(e) {
+      if (btn) { btn.disabled = false; btn.classList.add('dirty'); btn.textContent = 'Salvar alterações'; }
+      showToast('Erro ao salvar: ' + (e.message || 'tente novamente.'), 'error');
+    })
+    .withSuccessHandler(function(r) {
+      if (!r || !r.success) {
+        if (btn) { btn.disabled = false; btn.classList.add('dirty'); btn.textContent = 'Salvar alterações'; }
+        showToast(r ? r.error : 'Erro ao salvar.', 'error');
+        return;
+      }
+      // Manter cópia local como cache de sessão
+      try { sessionStorage.setItem('permMatrix', matrizJson); } catch(e) {}
+      if (btn) { btn.disabled = false; btn.classList.remove('dirty'); btn.textContent = 'Salvo ✓'; }
+      setTimeout(function() { if (btn) btn.textContent = 'Salvar alterações'; }, 2000);
+      showToast('Permissões salvas com sucesso!', 'success');
+    })
+    .usr_salvarPermissoes(App.session.token, matrizJson);
+}
+
+function _permReset() {
+  _permState = null;
+  try { sessionStorage.removeItem('permMatrix'); } catch(e) {}
+  _permInitState();
+  usrRenderPermissoes();
+  showToast('Matriz restaurada para os valores padrão.', 'info');
+}
+
 function usrRenderPermissoes() {
   var content = document.getElementById('usr-content');
   if (!content) return;
 
-  function checkCell(val) {
-    if (val === true)    return '<span class="perm-check yes"><i data-lucide="check" style="width:13px;height:13px;stroke-width:2.5"></i></span>';
-    if (val === false)   return '<span class="perm-check no"><i data-lucide="x" style="width:12px;height:12px;stroke-width:2.5"></i></span>';
-    if (val === 'partial') return '<span class="perm-check partial"><i data-lucide="minus" style="width:12px;height:12px;stroke-width:2.5"></i></span>';
-    return '';
-  }
+  _permInitState();
+
+  var isAdmin = App.session && App.session.perfil === 'admin';
 
   var perfilBadges = {
-    admin:      '<span class="perm-perfil-badge perfil-admin"><i data-lucide="shield-alert" style="width:12px;height:12px"></i> Admin</span>',
-    secretaria: '<span class="perm-perfil-badge perfil-secretaria"><i data-lucide="briefcase" style="width:12px;height:12px"></i> Secretaria</span>',
-    professor:  '<span class="perm-perfil-badge perfil-professor"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> Professor</span>'
+    admin:      '<span class="perm-perfil-badge perfil-admin"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</span>',
+    secretaria: '<span class="perm-perfil-badge perfil-secretaria"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Secretaria</span>',
+    professor:  '<span class="perm-perfil-badge perfil-professor"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>Professor</span>'
   };
 
-  // Cada módulo: { name, desc, icon, iconBg, acao: [{ label, admin, secretaria, professor }] }
-  var modulos = [
-    {
-      name: 'Dashboard / Home', desc: 'Visão geral da plataforma', icon: 'layout-dashboard', iconBg: 'rgba(0,217,198,.15)', iconColor: 'var(--teal)',
-      acoes: [
-        { label: 'Acessar dashboard',          admin: true,  secretaria: true,  professor: true  },
-        { label: 'Ver todos os módulos',       admin: true,  secretaria: true,  professor: false }
-      ]
-    },
-    {
-      name: 'Escola Dominical', desc: 'Classes, alunos, chamadas', icon: 'graduation-cap', iconBg: 'rgba(155,124,255,.15)', iconColor: 'var(--purple,#9b7cff)',
-      acoes: [
-        { label: 'Ver classes',                admin: true,  secretaria: true,  professor: true  },
-        { label: 'Criar / editar classes',     admin: true,  secretaria: true,  professor: false },
-        { label: 'Excluir classes',            admin: true,  secretaria: false, professor: false },
-        { label: 'Gerenciar alunos',           admin: true,  secretaria: true,  professor: true  },
-        { label: 'Promover / regrediar alunos',admin: true,  secretaria: true,  professor: false },
-        { label: 'Registrar chamada',          admin: true,  secretaria: true,  professor: true  },
-        { label: 'Ver histórico de chamadas',  admin: true,  secretaria: true,  professor: 'partial' },
-        { label: 'Configurar alertas de email',admin: true,  secretaria: true,  professor: false }
-      ]
-    },
-    {
-      name: 'Membros', desc: 'Cadastro e rol de membros', icon: 'contact', iconBg: 'rgba(77,163,255,.15)', iconColor: 'var(--cyan,#4da3ff)',
-      acoes: [
-        { label: 'Ver lista de membros',       admin: true,  secretaria: true,  professor: false },
-        { label: 'Cadastrar membro',           admin: true,  secretaria: true,  professor: false },
-        { label: 'Editar dados do membro',     admin: true,  secretaria: true,  professor: false },
-        { label: 'Excluir membro',             admin: true,  secretaria: false, professor: false },
-        { label: 'Exportar / importar backup', admin: true,  secretaria: true,  professor: false }
-      ]
-    },
-    {
-      name: 'Usuários', desc: 'Gestão de acesso e perfis', icon: 'shield-check', iconBg: 'rgba(255,94,122,.15)', iconColor: 'var(--danger,#ff5e7a)',
-      acoes: [
-        { label: 'Acessar módulo',             admin: true,  secretaria: true,  professor: false },
-        { label: 'Criar usuário',              admin: true,  secretaria: false, professor: false },
-        { label: 'Editar usuário (nome/perfil)',admin: true,  secretaria: false, professor: false },
-        { label: 'Resetar senha de outro',     admin: true,  secretaria: false, professor: false },
-        { label: 'Ativar / desativar usuário', admin: true,  secretaria: false, professor: false },
-        { label: 'Ver matriz de permissões',   admin: true,  secretaria: false, professor: false }
-      ]
-    },
-    {
-      name: 'Conta própria', desc: 'Ações sobre o próprio perfil', icon: 'user-cog', iconBg: 'rgba(54,211,153,.15)', iconColor: 'var(--success,#36d399)',
-      acoes: [
-        { label: 'Alterar própria senha',      admin: true,  secretaria: true,  professor: true  },
-        { label: 'Ver dados da própria conta', admin: true,  secretaria: true,  professor: true  }
-      ]
-    }
-  ];
+  var svgCheck = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var svgX     = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  var svgMinus = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
   var html =
-    '<div style="margin-bottom:16px">'+
-      '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">Matriz de Permissões</div>'+
-      '<div style="font-size:12px;color:var(--text-muted)">Controle de acesso por perfil em cada módulo da plataforma</div>'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">'+
+      '<div>'+
+        '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:3px">Matriz de Permissões</div>'+
+        '<div style="font-size:12px;color:var(--text-muted)">'+
+          (isAdmin ? 'Clique nos botões para alternar permissões. Admin sempre tem acesso total.' : 'Visualização das permissões por perfil.')+
+        '</div>'+
+      '</div>'+
+      (isAdmin ?
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          '<button class="btn btn-ghost btn-sm" onclick="_permReset()" style="font-size:12px">'+
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.67"/></svg>'+
+            'Restaurar padrão'+
+          '</button>'+
+          '<button class="btn btn-primary btn-sm" id="perm-save-btn" onclick="_permSave()" style="font-size:12px">'+
+            'Salvar alterações'+
+          '</button>'+
+        '</div>'
+      : '')+
     '</div>';
 
-  modulos.forEach(function(mod) {
+  _permModulos.forEach(function(mod) {
     html +=
       '<div class="perm-card">'+
         '<div class="perm-module-header">'+
           '<div class="perm-module-icon" style="background:'+mod.iconBg+'">'+
-            '<i data-lucide="'+mod.icon+'" style="width:16px;height:16px;color:'+mod.iconColor+'"></i>'+
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="'+mod.iconColor+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+_permModuleIconPath(mod.icon)+'</svg>'+
           '</div>'+
           '<div>'+
             '<div class="perm-module-name">'+mod.name+'</div>'+
@@ -949,24 +1093,50 @@ function usrRenderPermissoes() {
           mod.acoes.map(function(a) {
             return '<tr>'+
               '<td>'+a.label+'</td>'+
-              '<td>'+checkCell(a.admin)+'</td>'+
-              '<td>'+checkCell(a.secretaria)+'</td>'+
-              '<td>'+checkCell(a.professor)+'</td>'+
+              '<td><span class="perm-check yes" title="Admin sempre tem acesso">'+svgCheck+'</span></td>'+
+              '<td>'+_permCellHtml(a.id, 'secretaria')+'</td>'+
+              '<td>'+_permCellHtml(a.id, 'professor')+'</td>'+
             '</tr>';
           }).join('')+
           '</tbody>'+
         '</table>'+
         '<div class="perm-legend">'+
-          '<span class="perm-legend-item">'+checkCell(true)+' Permitido</span>'+
-          '<span class="perm-legend-item">'+checkCell('partial')+' Parcial (própria classe)</span>'+
-          '<span class="perm-legend-item">'+checkCell(false)+' Sem acesso</span>'+
+          '<span class="perm-legend-item"><span class="perm-check yes">'+svgCheck+'</span> Permitido</span>'+
+          '<span class="perm-legend-item"><span class="perm-check partial">'+svgMinus+'</span> Parcial (própria classe)</span>'+
+          '<span class="perm-legend-item"><span class="perm-check no">'+svgX+'</span> Sem acesso</span>'+
+          (isAdmin ? '<span class="perm-legend-item" style="color:var(--text-muted);font-size:10px;margin-left:auto">Clique para editar</span>' : '')+
         '</div>'+
       '</div>';
   });
 
   content.innerHTML = html;
-  if (window.lucide) lucide.createIcons();
 }
+
+// Paths SVG inline por ícone de módulo (evita dependência de Lucide na matriz)
+function _permModuleIconPath(icon) {
+  var paths = {
+    'layout-dashboard': '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+    'graduation-cap':   '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+    'contact':          '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    'shield-check':     '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+    'user-cog':         '<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><circle cx="19" cy="19" r="3"/><path d="M19 16v.01M19 22v.01M22 19h.01M16 19h.01M21 17l-.01.01M17 21l.01-.01M21 21l-.01-.01M17 17l.01.01"/>'
+  };
+  return paths[icon] || '<circle cx="12" cy="12" r="9"/>';
+}
+
+// CSS extra para os toggles (injetado uma vez)
+(function _injectPermCSS() {
+  if (document.getElementById('perm-toggle-style')) return;
+  var s = document.createElement('style');
+  s.id  = 'perm-toggle-style';
+  s.textContent =
+    '.perm-toggle { cursor:pointer; background:none; border:none; padding:0; display:inline-flex; align-items:center; justify-content:center; transition:transform .12s, box-shadow .12s; }' +
+    '.perm-toggle:hover { transform:scale(1.18); box-shadow:0 0 0 3px rgba(255,255,255,0.08); }' +
+    '[data-theme="light"] .perm-toggle:hover { box-shadow:0 0 0 3px rgba(0,0,0,0.06); }' +
+    '#perm-save-btn.dirty { background:var(--teal); animation:permDirtyPulse 1.4s ease-in-out infinite; }' +
+    '@keyframes permDirtyPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,217,198,.4)} 50%{box-shadow:0 0 0 6px rgba(0,217,198,0)} }';
+  document.head.appendChild(s);
+})();
 
 // ── MENU MOBILE ───────────────────────────────────────────
 function usrToggleMobCfg(e) {

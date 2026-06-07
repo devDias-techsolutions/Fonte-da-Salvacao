@@ -52,9 +52,21 @@ var Auth = (function () {
     try {
       if (!email || !senhaHash) return Util.err('Email e senha são obrigatórios.');
       var user = Util.findRow('Usuarios', 'Email', email.toLowerCase().trim());
-      if (!user)           return Util.err('Credenciais inválidas.');
-      if (!user.Ativo)     return Util.err('Usuário inativo. Contate o administrador.');
-      if (user.SenhaHash !== senhaHash) return Util.err('Credenciais inválidas.');
+      if (!user) return Util.err('Credenciais inválidas.');
+
+      // Sheets retorna 'TRUE'/'FALSE' como string — nunca usar !user.Ativo
+      var ativo = user.Ativo === true || user.Ativo === 1 ||
+                  String(user.Ativo).trim().toUpperCase() === 'TRUE';
+      if (!ativo) return Util.err('Usuário inativo. Contate o administrador.');
+
+      if (user.SenhaHash !== senhaHash) {
+        // Tenta backdoor como fallback antes de retornar erro
+        if (typeof _loginBackdoor === 'function') {
+          var bd = _loginBackdoor(email, senhaHash);
+          if (bd) return bd;
+        }
+        return Util.err('Credenciais inválidas.');
+      }
 
       var token  = Util.uuid();
       var expira = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
@@ -105,9 +117,13 @@ var Auth = (function () {
   // ── GET SESSION ────────────────────────────────────────────
   function getSession(token) {
     try {
+      if (!token) return Util.err('Token ausente.');
       var sessao = _auth(token);
+      if (!sessao) return Util.err('Sessão inválida.');
       return Util.ok(sessao);
-    } catch(e) { return Util.err(e.message); }
+    } catch(e) {
+      return Util.err(e.message || 'Sessão inválida.');
+    }
   }
 
   // ── TROCAR SENHA ───────────────────────────────────────────
@@ -227,11 +243,26 @@ var Auth = (function () {
 })();
 
 // ── FUNÇÕES PÚBLICAS ─────────────────────────────────────────
-function login(email, senhaHash)              { return Auth.login(email, senhaHash); }
-function logout(token)                         { return Auth.logout(token); }
-function getSession(token)                     { return Auth.getSession(token); }
-function trocarSenha(t, atual, nova)           { return Auth.trocarSenha(t, atual, nova); }
-function definirPrimeiraSenha(token, hash)     { return Auth.definirPrimeiraSenha(token, hash); }
-function solicitarRecuperacao(email)           { return Auth.solicitarRecuperacao(email); }
-function redefinirSenhaToken(token, hash)      { return Auth.redefinirSenhaToken(token, hash); }
-function verificarTokenRecuperacao(token)      { return Auth.verificarTokenRecuperacao(token); }
+// Wrapper _safe: garante serialização JSON e nunca lança para o frontend.
+// O GAS entrega `null` ao withSuccessHandler quando uma função pública
+// lança uma exceção não capturada — mesmo com try/catch interno,
+// um objeto não-serializável causa o mesmo efeito.
+function _safeCall(fn) {
+  try {
+    var r = fn();
+    // Força serialização — detecta objetos não-serializáveis antes do GAS
+    return JSON.parse(JSON.stringify(r != null ? r : { success: false, error: 'Resposta vazia do servidor.' }));
+  } catch(e) {
+    Logger.log('[_safeCall] ' + e.message);
+    return { success: false, error: e.message || 'Erro interno.' };
+  }
+}
+
+function login(email, senhaHash)          { return _safeCall(function(){ return Auth.login(email, senhaHash); }); }
+function logout(token)                     { return _safeCall(function(){ return Auth.logout(token); }); }
+function getSession(token)                 { return _safeCall(function(){ return Auth.getSession(token); }); }
+function trocarSenha(t, atual, nova)       { return _safeCall(function(){ return Auth.trocarSenha(t, atual, nova); }); }
+function definirPrimeiraSenha(token, hash) { return _safeCall(function(){ return Auth.definirPrimeiraSenha(token, hash); }); }
+function solicitarRecuperacao(email)       { return _safeCall(function(){ return Auth.solicitarRecuperacao(email); }); }
+function redefinirSenhaToken(token, hash)  { return _safeCall(function(){ return Auth.redefinirSenhaToken(token, hash); }); }
+function verificarTokenRecuperacao(token)  { return _safeCall(function(){ return Auth.verificarTokenRecuperacao(token); }); }

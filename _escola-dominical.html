@@ -410,71 +410,74 @@
 [data-theme="light"] .kpi-presenca    { --kpi-color: var(--success); --kpi-border: rgba(22,163,74,.28);  --kpi-shadow: rgba(22,163,74,.10);  --kpi-glow: rgba(22,163,74,.2); }
 
 /* ── STATS GRID ── */
-
-/* Card hero: span 2 no mobile, normal no tablet+ */
-.ed-stat-card.kpi-hero { grid-column: span 2; }
-@media (min-width: 640px) { .ed-stat-card.kpi-hero { grid-column: span 1; } }
-
-/* Sparkline */
-.ed-stat-sparkline {
-  position: absolute; bottom: 10px; right: 8px;
-  opacity: 0.18; pointer-events: none; z-index: 0; transition: opacity .3s;
-}
-.ed-stat-card:hover .ed-stat-sparkline { opacity: 0.35; }
-.ed-stat-sparkline svg { display: block; }
-
 .ed-stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px; margin-bottom: 10px;
+  gap: 8px; margin-bottom: 14px;
 }
-@media (min-width: 640px) { .ed-stats { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
-@media (min-width: 960px) { .ed-stats { gap: 12px; margin-bottom: 10px; } }
+@media (min-width: 520px) { .ed-stats { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
+@media (min-width: 960px) { .ed-stats { grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; } }
 
-/* ── KPI CARD — padrão home ── */
+/* ── KPI CARD individual ── */
 .ed-stat-card {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg,14px);
-  padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 0;
-  transition: border-color .22s, transform .22s, box-shadow .22s; cursor: default;
-  position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 14px 16px;
+  display: flex; flex-direction: column; gap: 0;
+  transition: border-color .22s, transform .22s, box-shadow .22s;
+  cursor: default; position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
   --kpi-color: var(--teal); --kpi-border: rgba(0,217,198,.32);
   --kpi-shadow: rgba(0,217,198,.14); --kpi-glow: rgba(0,217,198,.35);
 }
-[data-theme="light"] .ed-stat-card { background: #fff; border-color: #E2E8F0; box-shadow: 0 4px 6px -1px rgba(15,23,42,.03); }
+[data-theme="light"] .ed-stat-card { background: #fff; border-color: #E2E8F0; }
 
-/* Linha pulsante na base */
+/* Linha pulsante */
 .ed-stat-card::after {
   content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
   background: linear-gradient(90deg, transparent, var(--kpi-color), transparent);
   animation: ed-kpi-pulse 2.4s ease-in-out infinite;
 }
-@keyframes ed-kpi-pulse { 0%,100% { opacity: .25; } 50% { opacity: .8; } }
-.ed-stat-card:hover { border-color: var(--kpi-border); transform: translateY(-4px); box-shadow: 0 16px 40px var(--kpi-shadow); }
-[data-theme="light"] .ed-stat-card:hover { box-shadow: 0 12px 24px -8px rgba(15,23,42,.10); }
+@keyframes ed-kpi-pulse { 0%,100% { opacity: .2; } 50% { opacity: .75; } }
+.ed-stat-card:hover { border-color: var(--kpi-border); transform: translateY(-3px); box-shadow: 0 12px 28px var(--kpi-shadow); }
 
-/* Topo: ponto + tag */
-.ed-stat-top  { display: flex; align-items: center; gap: 7px; margin-bottom: 12px; }
-.ed-stat-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--kpi-color); box-shadow: 0 0 8px var(--kpi-color); flex-shrink: 0; }
-.ed-stat-tag  { font-size: 8px; font-weight: 800; letter-spacing: 1.2px; font-family: 'DM Mono',monospace; color: var(--kpi-color); opacity: .8; text-transform: uppercase; }
+/* Topo: ponto colorido + label */
+.ed-stat-top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.ed-stat-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--kpi-color); box-shadow: 0 0 6px var(--kpi-color); flex-shrink: 0; }
+.ed-stat-tag { font-size: 8px; font-weight: 800; letter-spacing: 1px; font-family: 'DM Mono',monospace; color: var(--kpi-color); opacity: .75; text-transform: uppercase; }
 
 /* Valor e label */
-.ed-stat-value { font-size: 40px; font-weight: 900; font-family: 'DM Mono',monospace; color: var(--text); line-height: .9; letter-spacing: -3px; text-shadow: 0 0 40px var(--kpi-glow); position: relative; z-index: 1; }
-.ed-stat-label { font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-top: 8px; line-height: 1.3; position: relative; z-index: 1; }
+.ed-stat-value {
+  font-size: 34px; font-weight: 900; font-family: 'DM Mono',monospace;
+  color: var(--text); line-height: .9; letter-spacing: -2px;
+  text-shadow: 0 0 28px var(--kpi-glow); position: relative; z-index: 1;
+}
+.ed-stat-label { font-size: 10px; font-weight: 700; color: var(--text-muted); margin-top: 7px; line-height: 1.3; position: relative; z-index: 1; }
 
 /* Ghost / marca d'água */
-.ed-stat-ghost {
-  position: absolute; right: -12px; bottom: -12px;
-  color: var(--kpi-color); opacity: 0.06; pointer-events: none; z-index: 0;
-  transform: rotate(-8deg); transition: opacity .3s;
-}
-.ed-stat-card:hover .ed-stat-ghost { opacity: .11; }
-.ed-stat-ghost i { width: 80px; height: 80px; display: block; }
+.ed-stat-ghost { position: absolute; right: -10px; bottom: -10px; color: var(--kpi-color); opacity: 0.055; pointer-events: none; z-index: 0; transform: rotate(-8deg); transition: opacity .3s; }
+.ed-stat-card:hover .ed-stat-ghost { opacity: .1; }
+.ed-stat-ghost i { width: 76px; height: 76px; display: block; }
 
-[data-theme="light"] .kpi-membros     .ed-stat-icon-wrap { background: rgba(0,169,156,0.11); }
-[data-theme="light"] .kpi-turmas      .ed-stat-icon-wrap { background: rgba(201,156,59,0.11); }
-[data-theme="light"] .kpi-professores .ed-stat-icon-wrap { background: rgba(139,110,255,0.11); }
-[data-theme="light"] .kpi-aulas       .ed-stat-icon-wrap { background: rgba(47,128,237,0.11); }
-[data-theme="light"] .kpi-presenca    .ed-stat-icon-wrap { background: rgba(22,163,74,0.11); }
+/* Sparkline */
+.ed-stat-sparkline { position: absolute; bottom: 8px; right: 6px; opacity: 0.13; pointer-events: none; z-index: 0; transition: opacity .3s; }
+.ed-stat-card:hover .ed-stat-sparkline { opacity: 0.28; }
+.ed-stat-sparkline svg { display: block; }
+
+/* Tokens de cor */
+.kpi-alunos    { --kpi-color: var(--teal);    --kpi-border: rgba(0,217,198,.32);   --kpi-shadow: rgba(0,217,198,.14);   --kpi-glow: rgba(0,217,198,.35); }
+.kpi-turmas    { --kpi-color: var(--gold);    --kpi-border: rgba(215,177,91,.32);  --kpi-shadow: rgba(215,177,91,.14);  --kpi-glow: rgba(215,177,91,.35); }
+.kpi-profs     { --kpi-color: var(--purple);  --kpi-border: rgba(155,124,255,.32); --kpi-shadow: rgba(155,124,255,.14); --kpi-glow: rgba(155,124,255,.35); }
+.kpi-aulas     { --kpi-color: var(--cyan);    --kpi-border: rgba(84,184,255,.32);  --kpi-shadow: rgba(84,184,255,.14);  --kpi-glow: rgba(84,184,255,.35); }
+.kpi-aulasmes  { --kpi-color: var(--cyan);    --kpi-border: rgba(84,184,255,.32);  --kpi-shadow: rgba(84,184,255,.14);  --kpi-glow: rgba(84,184,255,.35); }
+.kpi-presenca  { --kpi-color: var(--success); --kpi-border: rgba(54,211,153,.32);  --kpi-shadow: rgba(54,211,153,.14);  --kpi-glow: rgba(54,211,153,.35); }
+[data-theme="light"] .kpi-alunos   { --kpi-color: var(--teal);    --kpi-border: rgba(0,137,123,.28);  --kpi-shadow: rgba(0,137,123,.10);  --kpi-glow: rgba(0,137,123,.2); }
+[data-theme="light"] .kpi-turmas   { --kpi-color: var(--gold);    --kpi-border: rgba(180,83,9,.28);   --kpi-shadow: rgba(180,83,9,.10);   --kpi-glow: rgba(180,83,9,.2); }
+[data-theme="light"] .kpi-profs    { --kpi-color: var(--purple);  --kpi-border: rgba(109,40,217,.28); --kpi-shadow: rgba(109,40,217,.10); --kpi-glow: rgba(109,40,217,.2); }
+[data-theme="light"] .kpi-aulas    { --kpi-color: var(--cyan);    --kpi-border: rgba(2,132,199,.28);  --kpi-shadow: rgba(2,132,199,.10);  --kpi-glow: rgba(2,132,199,.2); }
+[data-theme="light"] .kpi-aulasmes { --kpi-color: var(--cyan);    --kpi-border: rgba(2,132,199,.28);  --kpi-shadow: rgba(2,132,199,.10);  --kpi-glow: rgba(2,132,199,.2); }
+[data-theme="light"] .kpi-presenca { --kpi-color: var(--success); --kpi-border: rgba(22,163,74,.28);  --kpi-shadow: rgba(22,163,74,.10);  --kpi-glow: rgba(22,163,74,.2); }
+
+/* Limpar resíduos de versões anteriores */
+.kpi-pessoas, .kpi-atividade, .kpi-membros, .kpi-professores { --kpi-color: var(--teal); }
 
 /* ── SEARCH (CYBERPUNK GLOW) ── */
 .ed-search-wrap { position: relative; margin-bottom: 16px; }
@@ -1598,12 +1601,12 @@ function _edRenderVisaoGeral(panel) {
     '</div>'+
 
     '<div class="ed-stats">'+
-      _edStatCard(s.totalAlunos || 0, 'Alunos', 'kpi-membros')+
-      _edStatCard(s.totalClasses || 0, 'Turmas', 'kpi-turmas')+
-      _edStatCard(s.totalProfessores || 0, 'Professores', 'kpi-professores')+
-      _edStatCard(s.totalAulas || 0, 'Aulas registradas', 'kpi-aulas')+
-      _edStatCard(s.aulasMes || 0, 'Aulas este mês', 'kpi-membros')+
-      _edStatCard((s.presencaMedia || 0) + '%', 'Média presença', 'kpi-presenca')+
+      _edStatCard(s.totalAlunos||0,      'Alunos',           'kpi-alunos',   'users')+
+      _edStatCard(s.totalClasses||0,     'Turmas',           'kpi-turmas',   'book-open')+
+      _edStatCard(s.totalProfessores||0, 'Professores',      'kpi-profs',    'graduation-cap')+
+      _edStatCard(s.totalAulas||0,       'Aulas registradas','kpi-aulas',    'calendar')+
+      _edStatCard(s.aulasMes||0,         'Aulas este mês',   'kpi-aulasmes', 'calendar-check')+
+      _edStatCard((s.presencaMedia||0)+'%','Média presença', 'kpi-presenca', 'trending-up')+
     '</div>'+
 
     '<div class="section-label" style="margin-top:24px">Turmas ativas</div>';
@@ -1670,29 +1673,27 @@ function _edRenderVisaoGeral(panel) {
 
 function _edStatCard(val, label, kpiClass, iconOverride) {
   var iconMap = {
-    'kpi-membros':     'users',
-    'kpi-turmas':      'book-open',
-    'kpi-professores': 'graduation-cap',
-    'kpi-aulas':       'calendar',
-    'kpi-presenca':    'trending-up',
-    'kpi-ausencia':    'user-x'
+    'kpi-alunos':   'users',
+    'kpi-turmas':   'book-open',
+    'kpi-profs':    'graduation-cap',
+    'kpi-aulas':    'calendar',
+    'kpi-aulasmes': 'calendar-check',
+    'kpi-presenca': 'trending-up'
   };
-  var icon     = iconOverride || iconMap[kpiClass] || 'bar-chart-2';
-  var isHero   = kpiClass === 'kpi-membros' && !iconOverride;
+  var icon      = iconOverride || iconMap[kpiClass] || 'bar-chart-2';
+  var tag       = label.split(' ')[0];
+  var cls       = kpiClass ? ' '+kpiClass : '';
+  var id        = 'edkv-'+kpiClass.replace('kpi-','');
   var isPresenca = kpiClass === 'kpi-presenca';
-  var tag      = label.split(' ')[0];
-  var cls      = kpiClass ? ' ' + kpiClass : '';
-  var id       = 'edkv-' + kpiClass + (iconOverride ? '-'+iconOverride : '');
-  var spark    = isPresenca ? _edSparkline() : '';
-  return '<div class="ed-stat-card'+cls+(isHero?' kpi-hero':'')+'">'+
+  return '<div class="ed-stat-card'+cls+'">'+
     '<div class="ed-stat-top">'+
       '<div class="ed-stat-dot"></div>'+
       '<span class="ed-stat-tag">'+tag+'</span>'+
     '</div>'+
     '<div class="ed-stat-value" id="'+id+'">'+val+'</div>'+
     '<div class="ed-stat-label">'+label+'</div>'+
-    spark+
-    '<div class="ed-stat-ghost"><i data-lucide="'+icon+'" style="width:80px;height:80px"></i></div>'+
+    (isPresenca ? _edSparkline() : '')+
+    '<div class="ed-stat-ghost"><i data-lucide="'+icon+'" style="width:76px;height:76px"></i></div>'+
   '</div>';
 }
 
@@ -1716,13 +1717,14 @@ function _edSparkline() {
 }
 
 function _edAnimKpis() {
-  var els = document.querySelectorAll('[id^="edkv-"]');
-  els.forEach(function(el) {
+  ['edkv-alunos','edkv-turmas','edkv-profs','edkv-aulas','edkv-aulasmes','edkv-presenca'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
     var raw    = el.textContent.trim();
     var isPct  = raw.indexOf('%') !== -1;
     var target = parseFloat(raw) || 0;
     if (!target || target < 2) return;
-    var start = 0, dur = 650, t0 = performance.now();
+    var dur = 650, t0 = performance.now();
     function step(now) {
       var p    = Math.min((now - t0) / dur, 1);
       var ease = 1 - Math.pow(1 - p, 3);

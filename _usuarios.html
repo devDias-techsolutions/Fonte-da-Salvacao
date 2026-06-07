@@ -459,12 +459,22 @@ function _usrSkeletonItem() {
 
 // ── CARREGAR USUÁRIOS ─────────────────────────────────────
 function _usrCarregar() {
+  var listEl = document.getElementById('usr-list');
+  if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px"><div class="loader-spinner" style="margin:0 auto 12px"></div>Carregando...</div>';
+
   google.script.run
     .withFailureHandler(function(e) {
-      showToast('Erro ao carregar usuários.', 'error');
+      var msg = (e && e.message) ? e.message : 'Erro de conexão.';
+      if (listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px">⚠ ' + msg + '</div>';
+      showToast('Erro: ' + msg, 'error');
     })
     .withSuccessHandler(function(res) {
-      if (!res || !res.success) { showToast(res ? res.error : 'Erro.', 'error'); return; }
+      if (!res || !res.success) {
+        var msg = res ? res.error : 'Erro desconhecido.';
+        if (listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);font-size:13px">⚠ ' + msg + '</div>';
+        showToast(msg, 'error');
+        return;
+      }
       UsrState.usuarios = res.data || [];
       _usrRenderLista();
     })

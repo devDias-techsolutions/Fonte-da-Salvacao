@@ -972,11 +972,11 @@ function initApp() {
       })
       .getSession(savedToken);
   } else {
-    var urlParams = new URLSearchParams(window.location.search);
-    var recovToken = urlParams.get('token');
-    var view = urlParams.get('view');
+    var urlParams   = new URLSearchParams(window.location.search);
+    var recovToken  = '<?= recovToken ?>' || urlParams.get('token') || '';
+    var view        = urlParams.get('view') || '<?= view ?>';
 
-    if (view === 'recuperar-senha' && recovToken) {
+    if ((view === 'recuperar-senha') && recovToken) {
       navigateTo('recuperar-senha', { token: recovToken });
     } else {
       navigateTo('login');

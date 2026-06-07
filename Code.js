@@ -45,10 +45,12 @@ try {
 
 // ── ENTRY POINT ─────────────────────────────────────────────
 function doGet(e) {
-  var view = (e && e.parameter && e.parameter.view) ? e.parameter.view : 'login';
+  var view  = (e && e.parameter && e.parameter.view)  ? e.parameter.view  : 'login';
+  var token = (e && e.parameter && e.parameter.token) ? e.parameter.token : '';
   var publicViews = ['login', 'primeiro-acesso', 'recuperar-senha'];
   var template = HtmlService.createTemplateFromFile('index');
   template.view         = view;
+  template.recovToken   = token;
   template.isPublicView = publicViews.indexOf(view) !== -1;
   return template.evaluate()
     .setTitle('AD Fonte da Salvação')

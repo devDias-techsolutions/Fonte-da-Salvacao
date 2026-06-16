@@ -247,12 +247,12 @@ function renderUsuarios() {
   var perfil = App.session.perfil || '';
   if (perfil === 'professor') {
     showToast('Acesso restrito.', 'error');
-    navigateTo('home');
+    navigateTo(_homeViewForPerfil(perfil));
     return;
   }
 
   var isAdmin = perfil === 'admin';
-  var isSec   = perfil === 'secretaria' || isAdmin;
+  var isSec   = perfil === 'secretaria'; // secretaria pura (sem admin)
   var perfilLabel = { admin: 'Admin', secretaria: 'Secretaria', professor: 'Professor' }[perfil] || perfil;
   var _thIcon = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'moon' : 'sun';
 
@@ -267,7 +267,7 @@ function renderUsuarios() {
   renderView(
     /* ── TOPNAV ── */
     '<nav class="topnav">'+
-      '<div class="topnav-logo" onclick="navigateTo(\'home\')" style="cursor:pointer">'+
+      '<div class="topnav-logo" onclick="navigateTo(\''+_homeViewForPerfil(perfil)+'\')" style="cursor:pointer">'+
         '<div class="topnav-logo-icon">'+
           '<img src="" alt="Logo AD" class="app-logo-img" style="width:28px;height:28px;object-fit:contain">'+
         '</div>'+
@@ -299,15 +299,15 @@ function renderUsuarios() {
                 '<div class="user-dd-email">'+(App.session.email||'')+'</div>'+
                 '<div style="margin-top:8px"><span class="badge badge-teal">'+perfilIcon+perfilLabel+'</span></div>'+
               '</div>'+
-              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
+              (isAdmin ? '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
                 '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
-              '</button>'+
+              '</button>' : '')+
               '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'escola-dominical\')">'+
                 '<i data-lucide="graduation-cap" style="width:15px;height:15px"></i> Escola Dominical'+
               '</button>'+
-              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'membros\')">'+
+              (isAdmin || isSec ? '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'membros\')">'+
                 '<i data-lucide="contact" style="width:15px;height:15px"></i> Membros'+
-              '</button>'+
+              '</button>' : '')+
               '<button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">'+
                 '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
               '</button>'+
@@ -338,15 +338,15 @@ function renderUsuarios() {
               '<i data-lucide="'+_thIcon+'" style="width:15px;height:15px"></i> Alternar tema'+
             '</button>'+
             '<div class="divider" style="height:1px;background:var(--border);margin:4px 0"></div>'+
-            '<button onclick="usrToggleMobCfg();navigateTo(\'home\')">'+
+            (isAdmin ? '<button onclick="usrToggleMobCfg();navigateTo(\'home\')">'+
               '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
-            '</button>'+
+            '</button>' : '')+
             '<button onclick="usrToggleMobCfg();navigateTo(\'escola-dominical\')">'+
               '<i data-lucide="graduation-cap" style="width:15px;height:15px"></i> Escola Dominical'+
             '</button>'+
-            '<button onclick="usrToggleMobCfg();navigateTo(\'membros\')">'+
+            (isAdmin ? '<button onclick="usrToggleMobCfg();navigateTo(\'membros\')">'+
               '<i data-lucide="contact" style="width:15px;height:15px"></i> Membros'+
-            '</button>'+
+            '</button>' : '')+
             '<div class="divider" style="height:1px;background:var(--border);margin:4px 0"></div>'+
             '<button onclick="usrToggleMobCfg();showTrocarSenha()">'+
               '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
@@ -363,10 +363,10 @@ function renderUsuarios() {
 
     /* ── BREADCRUMB BAR ── */
     '<div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:36px;display:flex;align-items:center;gap:0">'+
-      '<button style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid transparent;color:var(--text-muted);cursor:pointer;background:transparent;margin-right:8px;transition:all .2s" onclick="navigateTo(\'home\')" title="Voltar">'+
+      '<button style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid transparent;color:var(--text-muted);cursor:pointer;background:transparent;margin-right:8px;transition:all .2s" onclick="navigateTo(\''+_homeViewForPerfil(perfil)+'\')" title="Voltar">'+
         '<i data-lucide="arrow-left" style="width:14px;height:14px"></i>'+
       '</button>'+
-      '<span style="font-size:11.5px;color:var(--text-muted);font-weight:500;cursor:pointer" onclick="navigateTo(\'home\')">Gestão Ministerial</span>'+
+      '<span style="font-size:11.5px;color:var(--text-muted);font-weight:500;cursor:pointer" onclick="navigateTo(\''+_homeViewForPerfil(perfil)+'\')">Gestão Ministerial</span>'+
       '<span style="font-size:11px;color:var(--border-strong);margin:0 6px">/</span>'+
       '<span style="font-size:12px;font-weight:700;color:var(--teal)">Usuários</span>'+
       '<div style="display:flex;align-items:center;gap:4px;margin-left:10px">'+
@@ -425,15 +425,19 @@ function renderUsuarios() {
 
     /* ── BOTTOM NAV ── */
     '<nav class="usr-bottom-nav">'+
-      '<button class="usr-bnav-item" onclick="navigateTo(\'home\')">'+
-        '<i data-lucide="home" style="width:20px;height:20px"></i><span>Início</span>'+
-      '</button>'+
+      (isAdmin ?
+        '<button class="usr-bnav-item" onclick="navigateTo(\'home\')">'+
+          '<i data-lucide="home" style="width:20px;height:20px"></i><span>Início</span>'+
+        '</button>'
+      : '')+
       '<button class="usr-bnav-item" onclick="navigateTo(\'escola-dominical\')">'+
         '<i data-lucide="graduation-cap" style="width:20px;height:20px"></i><span>E. Dom.</span>'+
       '</button>'+
-      '<button class="usr-bnav-item" onclick="navigateTo(\'membros\')">'+
-        '<i data-lucide="contact" style="width:20px;height:20px"></i><span>Membros</span>'+
-      '</button>'+
+      (isAdmin ?
+        '<button class="usr-bnav-item" onclick="navigateTo(\'membros\')">'+
+          '<i data-lucide="contact" style="width:20px;height:20px"></i><span>Membros</span>'+
+        '</button>'
+      : '')+
       '<button class="usr-bnav-item active">'+
         '<i data-lucide="shield-check" style="width:20px;height:20px"></i><span>Usuários</span>'+
       '</button>'+

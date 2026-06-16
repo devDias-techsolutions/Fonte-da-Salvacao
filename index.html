@@ -6,6 +6,18 @@
 <meta name="theme-color" content="#050B10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AD Fonte da Salvação">
+<script>
+(function(){
+  var base = window.location.href.split('?')[0];
+  var el = document.createElement('link');
+  el.rel = 'manifest';
+  el.href = base + '?page=manifest';
+  document.head.appendChild(el);
+})();
+</script>
+<link rel="apple-touch-icon" href="https://drive.google.com/thumbnail?id=1D9uYwzWawJPpdcCp2hAtr0u20RnmOpQf&sz=w512">
+<link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1D9uYwzWawJPpdcCp2hAtr0u20RnmOpQf&sz=w512">
 <title>AD Fonte da Salvação</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -813,13 +825,46 @@ var VIEWS = {
   'usuarios':        'renderUsuarios'
 };
 
+// ── PERMISSÕES POR ROTA ───────────────────────────────────
+// Define quais perfis podem acessar cada view protegida.
+// 'admin' sempre tem acesso total — não precisa ser listado
+// explicitamente; a regra abaixo já contempla.
+var ROUTE_PERMISSIONS = {
+  'home':              ['admin'],
+  'escola-dominical':  ['admin', 'secretaria', 'professor'],
+  'membros':           ['admin', 'secretaria'],
+  'usuarios':          ['admin', 'secretaria']
+};
+
+// Retorna a view de destino padrão para cada perfil após login
+function _homeViewForPerfil(perfil) {
+  if (perfil === 'secretaria') return 'escola-dominical';
+  if (perfil === 'professor')  return 'escola-dominical';
+  return 'home'; // admin
+}
+
 function navigateTo(view, params) {
   App.currentView = view;
 
   var authRequired = ['home', 'escola-dominical', 'membros', 'usuarios'];
+
+  // 1. Sem sessão → login
   if (authRequired.indexOf(view) !== -1 && !App.session) {
     navigateTo('login');
     return;
+  }
+
+  // 2. Com sessão → checar permissão de perfil para a rota
+  if (App.session && ROUTE_PERMISSIONS[view]) {
+    var perfil   = App.session.perfil || '';
+    var allowed  = ROUTE_PERMISSIONS[view];
+    if (allowed.indexOf(perfil) === -1) {
+      showToast('Acesso restrito ao seu perfil.', 'error');
+      // Redireciona para a home correta do perfil sem criar loop
+      var fallback = _homeViewForPerfil(perfil);
+      if (fallback !== view) navigateTo(fallback);
+      return;
+    }
   }
 
   var fn = VIEWS[view];
@@ -955,7 +1000,7 @@ function initApp() {
           if (res.data.primeiroAcesso) {
             navigateTo('primeiro-acesso');
           } else {
-            navigateTo('home');
+            navigateTo(_homeViewForPerfil(res.data.perfil || ''));
           }
         } else {
           clearSession();

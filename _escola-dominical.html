@@ -170,16 +170,21 @@
 .ed-alerta-toggle-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .ed-toggle-sw { position:relative; width:40px; height:22px; flex-shrink:0; }
 .ed-toggle-sw input { opacity:0; width:0; height:0; position:absolute; }
-.ed-toggle-sw .slider { position:absolute; inset:0; background:var(--surface2);
+.ed-toggle-sw .slider { position:absolute; inset:0; background:var(--bg4);
                          border-radius:100px; cursor:pointer; transition:0.2s;
-                         border:1.5px solid var(--border); }
+                         border:1.5px solid var(--border2); }
 .ed-toggle-sw .slider:before { content:''; position:absolute; height:14px; width:14px;
-                                left:3px; top:2px; background:var(--text-muted);
-                                border-radius:50%; transition:0.2s; }
+                                left:3px; top:2px; background:#fff;
+                                border-radius:50%; transition:0.2s;
+                                box-shadow:0 1px 3px rgba(0,0,0,0.35); }
+[data-theme="light"] .ed-toggle-sw .slider { background:var(--bg5,#CBD5E1); border-color:var(--border-strong,#94A3B8); }
+[data-theme="light"] .ed-toggle-sw .slider:before { background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.25); }
 .ed-toggle-sw input:checked + .slider { background:var(--accent); border-color:var(--accent); }
 .ed-toggle-sw input:checked + .slider:before { transform:translateX(18px); background:#fff; }
+[data-theme="light"] .ed-toggle-sw input:checked + .slider { background:#fff; border-color:#00BFA5; }
+[data-theme="light"] .ed-toggle-sw input:checked + .slider:before { transform:translateX(18px); background:#23ab98; box-shadow:0 1px 4px rgba(0,191,165,0.4); }
 .ed-dest-row { display:flex; align-items:center; gap:8px; padding:8px 0;
-               border-bottom:1px solid var(--border10); }
+               border-bottom:1px solid var(--border10); }s
 .ed-dest-row:last-child { border-bottom:none; }
 .ed-dest-nome { flex:1; font-size:13px; font-weight:700; color:var(--text); }
 .ed-dest-checks { display:flex; gap:6px; flex-shrink:0; }
@@ -792,6 +797,15 @@
 .ed-check-btn.on.revista { border-color: var(--gold-border-high); background: var(--gold-dim); color: var(--gold); }
 .ed-check-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
+/* ── CHECK BUTTONS — mobile: bíblia/revista só ícone, mesma linha da presença ── */
+@media (max-width: 480px) {
+  .ed-checks { flex-wrap: nowrap; }
+  .ed-check-btn.biblia .ed-chk-txt,
+  .ed-check-btn.revista .ed-chk-txt { display: none; }
+  .ed-check-btn.biblia,
+  .ed-check-btn.revista { padding: 8px; min-width: 38px; justify-content: center; flex-shrink: 0; }
+}
+
 /* ── PONTOS EXTRAS ── */
 .ed-extras-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .ed-extra-btn {
@@ -1354,8 +1368,12 @@ function edSetTab(tab) {
       });
     });
   } else if (tab === 'aulas') {
-    _edLoadAulas(function() {
-      _edRenderTab();
+    _edLoadClasses(function() {
+      _edLoadAulas(function() {
+        _edLoadExtras(function() {
+          _edRenderTab();
+        });
+      });
     });
   } else if (tab === 'chamadas') {
     ED.chamada.step = 'aulas';
@@ -1388,7 +1406,9 @@ function edSetTab(tab) {
 function renderEscolaDominical() {
   if (!App.session) { navigateTo('login'); return; }
 
-  var isSec = App.session.perfil !== 'professor';
+  var isProfessor = App.session.perfil === 'professor';
+  var isSec       = !isProfessor;
+  var tabInicial  = isProfessor ? 'aulas' : 'visao-geral';
 
   ED.tab='visao-geral'; ED.classes=[]; ED.alunos=[];
   ED.professores=[]; ED.aulas=[]; ED.stats=null; ED.extras=[];
@@ -1398,20 +1418,24 @@ function renderEscolaDominical() {
   setTimeout(function() {
     if (window.lucide) lucide.createIcons();
     applyLogoSrc();
-    edSetTab('visao-geral');
+    edSetTab(tabInicial);
   }, 0);
 }
 
 function _buildEdPage(isSec) {
-  var tabs = [
-    ['visao-geral','layout-dashboard','Visão Geral'],
-    ['classes','school','Classes'],
-    ['alunos','backpack','Alunos'],
-    ['professores','user-check','Professores'],
-    ['aulas','clipboard-list','Aulas & Chamada'],
-    ['ranking','trophy','Ranking'],
-    ['relatorios','bar-chart-3','Relatorios']
+  var isProfessor = App.session.perfil === 'professor';
+
+  var todasTabs = [
+    ['visao-geral', 'layout-dashboard', 'Visão Geral'],
+    ['classes',     'school',           'Classes'],
+    ['alunos',      'backpack',         'Alunos'],
+    ['professores', 'user-check',       'Professores'],
+    ['aulas',       'clipboard-list',   'Aulas & Chamada'],
+    ['ranking',     'trophy',           'Ranking'],
+    ['relatorios',  'bar-chart-3',      'Relatórios']
   ];
+  var visiveis = isProfessor ? ['aulas','alunos','ranking'] : todasTabs.map(function(t){return t[0];});
+  var tabs = todasTabs.filter(function(t){ return visiveis.indexOf(t[0]) !== -1; });
 
   var tabsHtml = tabs.map(function(t) {
     var active = ED.tab===t[0] ? ' active' : '';
@@ -1424,7 +1448,7 @@ function _buildEdPage(isSec) {
 
   return (
     '<nav class="topnav">'+
-      '<div class="topnav-left" onclick="navigateTo(\'home\')" style="cursor:pointer">'+
+      '<div class="topnav-left"'+(isProfessor?'':' onclick="navigateTo(\'home\')" style="cursor:pointer"')+'>'+
         '<div class="topnav-logo-icon">'+
           '<img src="" alt="Logo AD" class="app-logo-img" style="width:28px;height:28px;object-fit:contain">'+
         '</div>'+
@@ -1475,9 +1499,11 @@ function _buildEdPage(isSec) {
                 '<div class="user-dd-email">'+String(App.session.email?App.session.email:'')+'</div>'+
                 '<div style="margin-top:6px"><span class="badge badge-teal">'+_esc(App.session.perfil||'')+'</span></div>'+
               '</div>'+
-              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
-                '<i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Dashboard'+
-              '</button>'+
+              (!isProfessor ?
+                '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
+                  '<i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Dashboard'+
+                '</button>'
+              : '')+
               '<button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">'+
                 '<i data-lucide="key" style="width:16px;height:16px"></i> Alterar senha'+
               '</button>'+
@@ -1512,13 +1538,15 @@ function _buildEdPage(isSec) {
             '<button onclick="edToggleNavCfg();toggleTheme()">'+
               '<i data-lucide="'+_thIcon+'" style="width:15px;height:15px"></i> '+(_curTheme==='dark'?'Modo claro':'Modo escuro')+
             '</button>'+
-            '<button onclick="edToggleNavCfg();edOpenModalAlertas()">'+
-              '<i data-lucide="bell-ring" style="width:15px;height:15px"></i> Alertas por email'+
-            '</button>'+
-            '<div class="divider"></div>'+
-            '<button onclick="edToggleNavCfg();navigateTo(\'home\')">'+
-              '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
-            '</button>'+
+            (!isProfessor ?
+              '<button onclick="edToggleNavCfg();edOpenModalAlertas()">'+
+                '<i data-lucide="bell-ring" style="width:15px;height:15px"></i> Alertas por email'+
+              '</button>'+
+              '<div class="divider"></div>'+
+              '<button onclick="edToggleNavCfg();navigateTo(\'home\')">'+
+                '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
+              '</button>'
+            : '')+
             '<button onclick="edToggleNavCfg();showTrocarSenha()">'+
               '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
             '</button>'+
@@ -1538,10 +1566,12 @@ function _buildEdPage(isSec) {
     '</nav>' +
 
     '<div class="ed-topnav-module">'+
-      '<button class="ed-topnav-module-back" onclick="navigateTo(\'home\')" title="Voltar">'+
-        '<i data-lucide="arrow-left" style="width:14px;height:14px"></i>'+
-      '</button>'+
-      '<span class="ed-topnav-crumb-app" onclick="navigateTo(\'home\')">Gestão Ministerial</span>'+
+      (!isProfessor ?
+        '<button class="ed-topnav-module-back" onclick="navigateTo(\'home\')" title="Voltar">'+
+          '<i data-lucide="arrow-left" style="width:14px;height:14px"></i>'+
+        '</button>'
+      : '')+
+      '<span class="ed-topnav-crumb-app"'+(isProfessor?'':' onclick="navigateTo(\'home\')" style="cursor:pointer"')+'>Gestão Ministerial</span>'+
       '<span class="ed-topnav-crumb-sep">/</span>'+
       '<span class="ed-topnav-crumb-module">Escola Dominical</span>'+
       '<div class="ed-topnav-crumb-tags">'+
@@ -1557,12 +1587,14 @@ function _buildEdPage(isSec) {
     '<div id="ed-panel" class="ed-content"></div>'+
 
     '<nav class="ed-bottom-nav">'+
-      '<button class="ed-bnav-item" onclick="navigateTo(\'home\')">'+
-        '<i data-lucide="home" style="width:20px;height:20px"></i><span>Início</span>'+
-      '</button>'+
-      '<button class="ed-bnav-item active" onclick="edSetTab(\'visao-geral\')">'+
-        '<i data-lucide="graduation-cap" style="width:20px;height:20px"></i><span>E. Dom.</span>'+
-      '</button>'+
+      (!isProfessor ?
+        '<button class="ed-bnav-item" onclick="navigateTo(\'home\')">'+
+          '<i data-lucide="home" style="width:20px;height:20px"></i><span>Início</span>'+
+        '</button>'+
+        '<button class="ed-bnav-item" onclick="edSetTab(\'visao-geral\')">'+
+          '<i data-lucide="graduation-cap" style="width:20px;height:20px"></i><span>E. Dom.</span>'+
+        '</button>'
+      : '')+
       '<button class="ed-bnav-item" onclick="edSetTab(\'aulas\')">'+
         '<i data-lucide="clipboard-list" style="width:20px;height:20px"></i><span>Chamada</span>'+
       '</button>'+
@@ -2182,6 +2214,7 @@ function _modalProfessor() {
       '</div>'+
       '<div class="field"><label>Nome completo *</label><input type="text" id="mprof-nome" placeholder="Nome do professor"></div>'+
       '<div class="field"><label>Turma responsável</label><select id="mprof-classe"><option value="">Sem turma definida</option></select></div>'+
+      '<div class="field"><label>Usuário do sistema <span style="color:var(--text-muted);font-size:11px">— vincula login ao professor</span></label><select id="mprof-usuario"><option value="">Sem vínculo</option></select></div>'+
       '<div class="field"><label>Telefone</label><input type="tel" id="mprof-tel" placeholder="(11) 99999-9999"></div>'+
       '<div class="field"><label>Email</label><input type="email" id="mprof-email" placeholder="email@exemplo.com"></div>'+
       '<div class="field"><label>Cursos</label><input type="text" id="mprof-cursos" placeholder="Ex: IBAD, Semiteleo..."></div>'+
@@ -2203,11 +2236,43 @@ function edOpenModalProf(id) {
   _edEditProfId = id || null;
   var t = document.getElementById('modal-prof-titulo');
   if (t) t.textContent = id ? 'Editar Professor' : 'Novo Professor';
+
+  // Popular classes
   var sel = document.getElementById('mprof-classe');
   sel.innerHTML = '<option value="">Sem turma definida</option>';
   ED.classes.forEach(function(c){ sel.innerHTML += '<option value="'+c.ID+'">'+_esc(c.Nome)+'</option>'; });
+
+  // Popular usuários (perfil professor) via backend
+  var selUsr = document.getElementById('mprof-usuario');
+  selUsr.innerHTML = '<option value="">Carregando...</option>';
+  selUsr.disabled = true;
+  google.script.run
+    .withFailureHandler(function() {
+      selUsr.innerHTML = '<option value="">Sem vínculo</option>';
+      selUsr.disabled = false;
+    })
+    .withSuccessHandler(function(r) {
+      selUsr.innerHTML = '<option value="">Sem vínculo</option>';
+      if (r && r.success && r.data) {
+        r.data.forEach(function(u) {
+          if (u.Perfil === 'professor' && (u.Ativo === true || u.Ativo === 'TRUE')) {
+            selUsr.innerHTML += '<option value="'+_esc(u.ID)+'">'+_esc(u.Nome)+' ('+_esc(u.Email)+')</option>';
+          }
+        });
+      }
+      selUsr.disabled = false;
+      // Restaurar valor se editando
+      if (id) {
+        var p = _edFindById(ED.professores, id);
+        if (p && p.UsuarioID) selUsr.value = p.UsuarioID;
+      }
+    })
+    .usr_listar(App.session.token);
+
+  // Limpar campos
   ['nome','tel','email','cursos','wa'].forEach(function(f){ document.getElementById('mprof-'+f).value=''; });
   document.getElementById('mprof-nasc').value = '';
+
   if (id) {
     var p = _edFindById(ED.professores, id);
     if (p) {
@@ -2215,8 +2280,8 @@ function edOpenModalProf(id) {
       document.getElementById('mprof-tel').value    = p.Telefone ||'';
       document.getElementById('mprof-email').value  = p.Email    ||'';
       document.getElementById('mprof-cursos').value = p.Cursos   ||'';
-      document.getElementById('mprof-nasc').value  = _toInputDate(p.DataNasc)||'';
-      document.getElementById('mprof-wa').value    = p.NumeroWA  ||'';
+      document.getElementById('mprof-nasc').value   = _toInputDate(p.DataNasc)||'';
+      document.getElementById('mprof-wa').value     = p.NumeroWA ||'';
       sel.value = p.ClasseID || '';
     }
   }
@@ -2229,13 +2294,14 @@ function edSalvarProf() {
   var btn = document.getElementById('btn-salvar-prof');
   btn.classList.add('loading');
   var dados = {
-    Nome:     nome,
-    ClasseID: document.getElementById('mprof-classe').value ||'',
-    Telefone: document.getElementById('mprof-tel').value    ||'',
-    Email:    document.getElementById('mprof-email').value  ||'',
-    Cursos:    document.getElementById('mprof-cursos').value ||'',
-    DataNasc:  document.getElementById('mprof-nasc').value    ||'',
-    NumeroWA:  document.getElementById('mprof-wa').value      ||''
+    Nome:      nome,
+    ClasseID:  document.getElementById('mprof-classe').value   ||'',
+    UsuarioID: document.getElementById('mprof-usuario').value  ||'',
+    Telefone:  document.getElementById('mprof-tel').value      ||'',
+    Email:     document.getElementById('mprof-email').value    ||'',
+    Cursos:    document.getElementById('mprof-cursos').value   ||'',
+    DataNasc:  document.getElementById('mprof-nasc').value     ||'',
+    NumeroWA:  document.getElementById('mprof-wa').value       ||''
   };
   var runner = google.script.run
     .withFailureHandler(function(e){ btn.classList.remove('loading'); showToast(e.message,'error'); })
@@ -2607,9 +2673,9 @@ function _edRenderChamadaFormStep(panel,alunos,jaLancada,classeNome){
         '</div>'+
         '<div class="ed-checks">'+
           '<button class="ed-check-btn'+(reg.presente?' on':'')+'" onclick="edTogglePresenca(\''+a.alunoId+'\')">'+
-            (reg.presente?'OK Presente':'Ausente')+'</button>'+
-          '<button class="ed-check-btn biblia'+(reg.biblia?' on':'')+'" id="btn-bib-'+a.alunoId+'" onclick="edToggleBiblia(\''+a.alunoId+'\')"'+(reg.presente?'':' disabled')+'>Biblia</button>'+
-          '<button class="ed-check-btn revista'+(reg.revista?' on':'')+'" id="btn-rev-'+a.alunoId+'" onclick="edToggleRevista(\''+a.alunoId+'\')"'+(reg.presente?'':' disabled')+'>Revista</button>'+
+            (reg.presente?'✓ Presente':'Ausente')+'</button>'+
+          '<button class="ed-check-btn biblia'+(reg.biblia?' on':'')+'" id="btn-bib-'+a.alunoId+'" onclick="edToggleBiblia(\''+a.alunoId+'\')"'+(reg.presente?'':' disabled')+'><i data-lucide="book" style="width:14px;height:14px;flex-shrink:0"></i><span class="ed-chk-txt">Bíblia</span></button>'+
+          '<button class="ed-check-btn revista'+(reg.revista?' on':'')+'" id="btn-rev-'+a.alunoId+'" onclick="edToggleRevista(\''+a.alunoId+'\')"'+(reg.presente?'':' disabled')+'><i data-lucide="book-open" style="width:14px;height:14px;flex-shrink:0"></i><span class="ed-chk-txt">Revista</span></button>'+
         '</div>'+
         (!a.isProfessor?(function(){
           var ex2=ED.chamada.extras||[]; 
@@ -3574,7 +3640,7 @@ function _modalAlertas() {
           '<div style="font-size:17px;font-weight:800;color:var(--text)">Alertas & Aniversários</div>'+
           '<div style="font-size:12px;color:var(--text-muted);margin-top:3px">Configure alertas por email Gmail e destinatários</div>'+
         '</div>'+
-        '<button class="btn btn-ghost btn-sm" style="width:36px;padding:0;flex-shrink:0" onclick="edCloseModal(\"modal-alertas\")">✕</button>'+
+        '<button class="btn btn-ghost btn-sm" style="width:36px;padding:0;flex-shrink:0" onclick="edCloseModal(\'modal-alertas\')">✕</button>'+
       '</div>'+
 
       '<div class="ed-alerta-section">'+
@@ -3603,6 +3669,11 @@ function _modalAlertas() {
                '<div class="ed-alerta-toggle-sub">Lembrete enviado às 08h no dia do aniversário de cada aluno</div></div>'+
           '<label class="ed-toggle-sw"><input type="checkbox" id="alerta-dia"><span class="slider"></span></label>'+
         '</div>'+
+        '<div class="ed-alerta-toggle-row">'+
+          '<div><div class="ed-alerta-toggle-label">Alunos sem data de nascimento</div>'+
+               '<div class="ed-alerta-toggle-sub">Inclui no resumo semanal a lista de alunos sem data cadastrada</div></div>'+
+          '<label class="ed-toggle-sw"><input type="checkbox" id="alerta-sem-nasc"><span class="slider"></span></label>'+
+        '</div>'+
       '</div>'+
 
       '<div class="ed-alerta-section">'+
@@ -3630,7 +3701,7 @@ function _modalAlertas() {
       '</div>'+
 
       '<div style="display:flex;gap:10px;margin-top:4px">'+
-        '<button class="btn btn-secondary btn-full" onclick="edCloseModal(\"modal-alertas\")">Fechar</button>'+
+        '<button class="btn btn-secondary btn-full" onclick="edCloseModal(\'modal-alertas\')">Fechar</button>'+
         '<button class="btn btn-primary btn-full" id="btn-salvar-alertas" onclick="edSalvarConfigAlertas()">'+
           '<span class="btn-text">Salvar Configuração</span><div class="btn-spinner"></div>'+
         '</button>'+
@@ -3665,6 +3736,7 @@ function edOpenModalAlertas() {
       setC('email-ativo', cfg.email_ativo);
       setC('alerta-semana', cfg.alerta_semana);
       setC('alerta-dia', cfg.alerta_dia);
+      setC('alerta-sem-nasc', cfg.alerta_sem_nasc);
       edToggleEmailStatus();
       _edRenderDestinatarios();
       if(window.lucide) lucide.createIcons();
@@ -3717,10 +3789,11 @@ function edSalvarConfigAlertas() {
   if (btn) btn.classList.add('loading');
   var gC = function(id){ var el=document.getElementById(id); return el?el.checked:false; };
   var config = {
-    email_ativo:   gC('email-ativo'),
-    alerta_semana: gC('alerta-semana'),
-    alerta_dia:    gC('alerta-dia'),
-    destinatarios: _edAlertaDest
+    email_ativo:      gC('email-ativo'),
+    alerta_semana:    gC('alerta-semana'),
+    alerta_dia:       gC('alerta-dia'),
+    alerta_sem_nasc:  gC('alerta-sem-nasc'),
+    destinatarios:    _edAlertaDest
   };
   google.script.run
     .withFailureHandler(function(e){ if(btn) btn.classList.remove('loading'); showToast(e.message,'error'); })
@@ -3742,10 +3815,11 @@ function edTestarEmail() {
     })
     .withSuccessHandler(function(r) {
       if(btn){btn.disabled=false;btn.innerHTML='<i data-lucide="send" style="width:13px;height:13px"></i> Testar Email';if(window.lucide)lucide.createIcons();}
-      if (!r||!r.success) { showToast(r&&r.error?r.error:'Email não configurado. Salve primeiro.','error'); return; }
-      showToast('Alertas de hoje disparados! Verifique o Gmail. 📧','success');
+      if (!r||!r.success) { showToast(r&&r.error?r.error:'Falha ao enviar. Salve a configuração e tente novamente.','error'); return; }
+      var env = r.data&&r.data.enviados ? r.data.enviados : 1;
+      showToast('Email de teste enviado para ' + env + ' destinatário(s)! Verifique o Gmail. 📧','success');
     })
-    .ed_dispararAlertaManual(App.session.token, 'dia');
+    .ed_dispararAlertaManual(App.session.token, 'teste');
 }
 
 function edSetupTriggers() {

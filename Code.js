@@ -61,6 +61,27 @@ function doGet(e) {
   var view       = params.view  || '';
   var recovToken = params.token || '';
 
+  // ── Rota: manifest PWA ──────────────────────────────────────
+  if (params.page === 'manifest') {
+    var iconUrl = 'https://drive.google.com/thumbnail?id=1D9uYwzWawJPpdcCp2hAtr0u20RnmOpQf&sz=w512';
+    var manifest = {
+      name: 'AD Fonte da Salvação',
+      short_name: 'AD Fonte',
+      start_url: ScriptApp.getService().getUrl(),
+      display: 'standalone',
+      background_color: '#050B10',
+      theme_color: '#050B10',
+      icons: [
+        { src: iconUrl, sizes: '192x192', type: 'image/png' },
+        { src: iconUrl, sizes: '512x512', type: 'image/png' }
+      ]
+    };
+    return ContentService
+      .createTextOutput(JSON.stringify(manifest))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  // ───────────────────────────────────────────────────────────
+
   var tmpl = HtmlService.createTemplateFromFile('index');
 
   // Injeta no template — o JS do index.html lê com <?= recovToken ?> e <?= view ?>

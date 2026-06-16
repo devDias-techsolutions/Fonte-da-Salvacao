@@ -35,15 +35,37 @@ var EscolaDominical = (function () {
     return s === 'TRUE' || s === '1' || s === 'SIM';
   }
 
+  // ── Helper: ClasseIDs permitidas para o professor logado ─────────────────
+  // Lê Professores onde UsuarioID === sess.id e Ativo === true.
+  // Retorna { "classeId": true } para lookup O(1).
+  // Retorna null para admin/secretaria → sem restrição.
+  function _classesDoProfessor(sess) {
+    if (!sess || sess.perfil !== 'professor') return null;
+    var set = {};
+    _safeSheetObjects('Professores').forEach(function(r) {
+      if (_isAtivo(r.Ativo) &&
+          String(r.UsuarioID).trim() === String(sess.id).trim() &&
+          r.ClasseID) {
+        set[String(r.ClasseID)] = true;
+      }
+    });
+    return set;
+  }
+
   // ══════════════════════════════════════════
   //  CLASSES
   // ══════════════════════════════════════════
 
   function listarClasses(token) {
     try {
-      Auth._auth(token);
-      var rows = _safeSheetObjects('Classes');
-      return Util.ok(_strip(rows.filter(function (r) { return _isAtivo(r.Ativo); })));
+      var sess = Auth._auth(token);
+      var ok = _classesDoProfessor(sess);
+      var rows = _safeSheetObjects('Classes').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (ok !== null && !ok[String(r.ID)]) return false;
+        return true;
+      });
+      return Util.ok(_strip(rows));
     } catch (e) { return Util.err(e.message); }
   }
 
@@ -136,11 +158,12 @@ var EscolaDominical = (function () {
 
   function listarAlunos(token, classeId) {
     try {
-      Auth._auth(token);
-      var rows = _safeSheetObjects('Alunos').filter(function (r) {
-        var ativo = _isAtivo(r.Ativo);
-        if (!ativo) return false;
-        if (classeId) return r.ClasseID === classeId;
+      var sess = Auth._auth(token);
+      var ok = _classesDoProfessor(sess);
+      var rows = _safeSheetObjects('Alunos').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (classeId && r.ClasseID !== classeId) return false;
+        if (ok !== null && !ok[String(r.ClasseID)]) return false;
         return true;
       });
       return Util.ok(_strip(rows));
@@ -386,8 +409,10 @@ var EscolaDominical = (function () {
 
   function getChamada(token, aulaId, classeId) {
     try {
-      Auth._auth(token);
+      var sess = Auth._auth(token);
       if (!aulaId || !classeId) return Util.err('aulaId e classeId são obrigatórios.');
+      var ok = _classesDoProfessor(sess);
+      if (ok !== null && !ok[String(classeId)]) return Util.err('Sem permissão para acessar esta turma.');
 
       // Alunos da classe
       var alunos = _safeSheetObjects('Alunos').filter(function (r) {
@@ -469,6 +494,8 @@ var EscolaDominical = (function () {
     try {
       var sess = Auth._auth(token);
       if (!aulaId || !classeId || !registros) return Util.err('Dados incompletos.');
+      var ok = _classesDoProfessor(sess);
+      if (ok !== null && !ok[String(classeId)]) return Util.err('Sem permissão para registrar chamada nesta turma.');
 
       var config     = _getConfig();
       var ptPresenca = Number(config.PONTOS_PRESENCA) || 1;
@@ -552,13 +579,17 @@ var EscolaDominical = (function () {
 
   function listarChamadasPorAula(token, aulaId) {
     try {
-      Auth._auth(token);
-      var chamadas = _safeSheetObjects('Chamadas').filter(function (r) {
-        return r.AulaID === aulaId;
+      var sess = Auth._auth(token);
+      var ok = _classesDoProfessor(sess);
+      var chamadas = _safeSheetObjects('Chamadas').filter(function(r) {
+        if (r.AulaID !== aulaId) return false;
+        if (ok !== null && !ok[String(r.ClasseID)]) return false;
+        return true;
       });
-      // Dados de turma (oferta, visitantes, obs) para esta aula
-      var infoTurmas = _safeSheetObjects('ChamadasInfo').filter(function (r) {
-        return r.AulaID === aulaId;
+      var infoTurmas = _safeSheetObjects('ChamadasInfo').filter(function(r) {
+        if (r.AulaID !== aulaId) return false;
+        if (ok !== null && !ok[String(r.ClasseID)]) return false;
+        return true;
       });
       return Util.ok({ chamadas: chamadas, infoTurmas: infoTurmas });
     } catch (e) { return Util.err(e.message); }
@@ -566,15 +597,16 @@ var EscolaDominical = (function () {
 
   function getRankingAlunos(token, classeId) {
     try {
-      Auth._auth(token);
+      var sess = Auth._auth(token);
+      var ok = _classesDoProfessor(sess);
       var filtro = classeId || null;
-      var alunos = _safeSheetObjects('Alunos').filter(function (r) {
-        var ativo = _isAtivo(r.Ativo);
-        if (!ativo) return false;
-        if (filtro) return r.ClasseID === filtro;
+      var alunos = _safeSheetObjects('Alunos').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (filtro && r.ClasseID !== filtro) return false;
+        if (ok !== null && !ok[String(r.ClasseID)]) return false;
         return true;
       });
-      alunos.sort(function (a, b) {
+      alunos.sort(function(a, b) {
         return (Number(b.TotalPontos) || 0) - (Number(a.TotalPontos) || 0);
       });
       return Util.ok(alunos);
@@ -583,27 +615,34 @@ var EscolaDominical = (function () {
 
   function getEstatisticasGerais(token) {
     try {
-      // Validação de sessão é opcional para esta função (pode ser chamada de teste)
-      if (token && token !== 'dummy-token') {
-        Auth._auth(token);
-      }
-      var alunos      = _safeSheetObjects('Alunos').filter(function(r)      { return _isAtivo(r.Ativo); });
-      var classes     = _safeSheetObjects('Classes').filter(function(r)     { return _isAtivo(r.Ativo); });
+      var sess = (token && token !== 'dummy-token') ? Auth._auth(token) : null;
+      var ok = sess ? _classesDoProfessor(sess) : null;
+      var alunos = _safeSheetObjects('Alunos').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (ok !== null && !ok[String(r.ClasseID)]) return false;
+        return true;
+      });
+      var classes = _safeSheetObjects('Classes').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (ok !== null && !ok[String(r.ID)]) return false;
+        return true;
+      });
       var professores = _safeSheetObjects('Professores').filter(function(r) { return _isAtivo(r.Ativo); });
-      var aulas       = _safeSheetObjects('Aulas');
-      var chamadas    = _safeSheetObjects('Chamadas');
-
-      // Presença média geral
+      var aulas    = _safeSheetObjects('Aulas');
+      var chamadas = _safeSheetObjects('Chamadas');
+      if (ok !== null) {
+        chamadas = chamadas.filter(function(c) { return ok[String(c.ClasseID)]; });
+        var _ids = {};
+        chamadas.forEach(function(c) { if (c.AulaID) _ids[String(c.AulaID)] = true; });
+        aulas = aulas.filter(function(a) { return _ids[String(a.ID)]; });
+      }
       var totalPresentes = chamadas.filter(function(c) { return c.Presente === true || c.Presente === 'TRUE'; }).length;
       var mediaPres = chamadas.length ? Math.round((totalPresentes / chamadas.length) * 100) : 0;
-
-      // Aulas no mês atual
-      var hoje      = new Date();
-      var aulasHoje = aulas.filter(function (a) {
+      var hoje = new Date();
+      var aulasHoje = aulas.filter(function(a) {
         var d = _parseDateBR(a.CriadoEm);
         return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
       });
-
       return Util.ok({
         totalAlunos:      alunos.length,
         totalClasses:     classes.length,
@@ -635,9 +674,14 @@ var EscolaDominical = (function () {
   // Resumo por classe: total de alunos, presença média, última aula
   function getResumoClasses(token) {
     try {
-      Auth._auth(token);
-      var classes     = _safeSheetObjects('Classes').filter(function(r)  { return _isAtivo(r.Ativo); });
-      var alunos      = _safeSheetObjects('Alunos').filter(function(r)   { return _isAtivo(r.Ativo); });
+      var sess = Auth._auth(token);
+      var ok = _classesDoProfessor(sess);
+      var classes = _safeSheetObjects('Classes').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (ok !== null && !ok[String(r.ID)]) return false;
+        return true;
+      });
+      var alunos = _safeSheetObjects('Alunos').filter(function(r) { return _isAtivo(r.Ativo); });
       var aulas       = _safeSheetObjects('Aulas');
       var chamadas    = _safeSheetObjects('Chamadas');
 
@@ -745,14 +789,23 @@ var EscolaDominical = (function () {
   // Carga inicial em uma única chamada — elimina cascatas no frontend
   function getDadosIniciais(token, tabs) {
     try {
-      Auth._auth(token);
+      var sess = Auth._auth(token);
+      var ok = _classesDoProfessor(sess);
       tabs = tabs || [];
       var result = {};
 
-      result.classes = _strip(_safeSheetObjects('Classes').filter(function(r) { return _isAtivo(r.Ativo); }));
+      result.classes = _strip(_safeSheetObjects('Classes').filter(function(r) {
+        if (!_isAtivo(r.Ativo)) return false;
+        if (ok !== null && !ok[String(r.ID)]) return false;
+        return true;
+      }));
 
       if (tabs.indexOf('alunos') !== -1) {
-        result.alunos = _strip(_safeSheetObjects('Alunos').filter(function(r) { return _isAtivo(r.Ativo); }));
+        result.alunos = _strip(_safeSheetObjects('Alunos').filter(function(r) {
+          if (!_isAtivo(r.Ativo)) return false;
+          if (ok !== null && !ok[String(r.ClasseID)]) return false;
+          return true;
+        }));
       }
       if (tabs.indexOf('professores') !== -1) {
         result.professores = _strip(_safeSheetObjects('Professores').filter(function(r) { return _isAtivo(r.Ativo); }));
@@ -988,20 +1041,60 @@ var EscolaDominical = (function () {
       }
       if (!anivTurma.length) return;
       var cl = (classes.filter(function(c){ return c.ID === prof.ClasseID; })[0] || {}).Nome || 'sua turma';
+
+      // Bloco alunos sem DataNasc (somente se cfg.alerta_sem_nasc ativo)
+      var semNascTurma = cfg.alerta_sem_nasc
+        ? alunos.filter(function(a){ return a.ClasseID === prof.ClasseID && !a.DataNasc; })
+        : [];
+      var plainSemNasc = semNascTurma.length
+        ? '\n\n--- ATENCAO: ' + semNascTurma.length + ' aluno(s) sem data de nascimento cadastrada ---\n' +
+          semNascTurma.map(function(a){ return '* ' + a.Nome; }).join('\n') +
+          '\nCadastre as datas para receber os alertas de aniversario.'
+        : '';
+      var htmlSemNasc = semNascTurma.length
+        ? '<hr><p style="color:#B45309"><strong>&#x26A0;&#xfe0f; ' + semNascTurma.length +
+          ' aluno(s) sem data de nascimento cadastrada em ' + cl + ':</strong></p><ul>' +
+          semNascTurma.map(function(a){ return '<li>' + a.Nome + '</li>'; }).join('') +
+          '</ul><p style="font-size:12px;color:#666">Cadastre as datas no m&#xf3;dulo Escola Dominical para que os alertas de anivers&#xe1;rio funcionem corretamente.</p>'
+        : '';
+
       var plain1 = 'Escola Dominical - Aniversariantes da Semana\n\n' +
         'Ola, ' + prof.Nome.split(' ')[0] + '! Esta semana temos aniversariantes em ' + cl + ':\n\n' +
         anivTurma.map(function(a){ return a.nome + ' - ' + a.diaLabel; }).join('\n') +
-        '\n\nNao esqueca de desejar parabens!';
+        '\n\nNao esqueca de desejar parabens!' + plainSemNasc;
       var html1 = '<meta charset="UTF-8">' +
         '<p><strong>&#x1F382; Escola Dominical &#x2013; Aniversariantes da Semana</strong></p>' +
         '<p>Ol&#xe1;, ' + prof.Nome.split(' ')[0] + '! Esta semana temos aniversariantes em <strong>' + cl + '</strong>:</p><ul>' +
         anivTurma.map(function(a){ return '<li><strong>' + a.nome + '</strong> &#x2013; ' + a.diaLabel + ' &#x1F973;</li>'; }).join('') +
-        '</ul><p>N&#xe3;o esque&#xe7;a de desejar parab&#xe9;ns!</p>';
+        '</ul><p>N&#xe3;o esque&#xe7;a de desejar parab&#xe9;ns!</p>' + htmlSemNasc;
       _enviarEmailHtml(prof.Email, assunto, plain1, html1);
     });
 
     // Destinatários globais
     var dest = cfg.destinatarios || [];
+
+    // Lista global de alunos ativos sem DataNasc (reutilizada por todos os destinatários)
+    var semNascGlobal = cfg.alerta_sem_nasc
+      ? alunos.filter(function(a){ return !a.DataNasc; })
+      : [];
+    var plainSemNascGlobal = semNascGlobal.length
+      ? '\n\n--- ATENCAO: ' + semNascGlobal.length + ' aluno(s) sem data de nascimento cadastrada ---\n' +
+        semNascGlobal.map(function(a){
+          var cl = (classes.filter(function(c){ return c.ID === a.ClasseID; })[0] || {}).Nome || 'Sem turma';
+          return '* ' + a.Nome + ' (' + cl + ')';
+        }).join('\n') +
+        '\nCadastre as datas para receber os alertas de aniversario.'
+      : '';
+    var htmlSemNascGlobal = semNascGlobal.length
+      ? '<hr><p style="color:#B45309"><strong>&#x26A0;&#xfe0f; ' + semNascGlobal.length +
+        ' aluno(s) sem data de nascimento cadastrada:</strong></p><ul>' +
+        semNascGlobal.map(function(a){
+          var cl = (classes.filter(function(c){ return c.ID === a.ClasseID; })[0] || {}).Nome || 'Sem turma';
+          return '<li><strong>' + a.Nome + '</strong> &#x2013; ' + cl + '</li>';
+        }).join('') +
+        '</ul><p style="font-size:12px;color:#666">Cadastre as datas no m&#xf3;dulo Escola Dominical para que os alertas de anivers&#xe1;rio funcionem corretamente.</p>'
+      : '';
+
     dest.forEach(function(r) {
       if (!r.email || !r.alertaSemana) return;
       var todos = [];
@@ -1013,11 +1106,13 @@ var EscolaDominical = (function () {
         });
       }
       var plain2 = 'Escola Dominical - Aniversariantes da Semana\n\n' +
-        (todos.length ? todos.map(function(p){ return p.nome + ' - ' + p.diaLabel; }).join('\n') : 'Nenhum aniversariante esta semana.');
+        (todos.length ? todos.map(function(p){ return p.nome + ' - ' + p.diaLabel; }).join('\n') : 'Nenhum aniversariante esta semana.') +
+        plainSemNascGlobal;
       var html2 = '<meta charset="UTF-8"><p><strong>&#x1F382; Escola Dominical &#x2013; Aniversariantes da Semana</strong></p>' +
         (todos.length
           ? '<ul>' + todos.map(function(p){ return '<li><strong>' + p.nome + '</strong> &#x2013; ' + p.diaLabel + ' &#x1F973;</li>'; }).join('') + '</ul>'
-          : '<p>Nenhum aniversariante esta semana. &#x1F60A;</p>');
+          : '<p>Nenhum aniversariante esta semana. &#x1F60A;</p>') +
+        htmlSemNascGlobal;
       _enviarEmailHtml(r.email, assunto, plain2, html2);
     });
   }

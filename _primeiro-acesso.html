@@ -12,7 +12,17 @@
   flex: 1;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 24px 20px 48px;
+  padding: 24px var(--gutter) 48px;
+}
+
+/* ── MODO COMPACTO — viewports baixas (mesmo critério do login) ── */
+@media (max-height: 760px) {
+  .pa-wrapper      { padding: 16px var(--gutter) 20px; }
+  .pa-card         { padding: 20px 24px; }
+  .pa-badge        { margin-bottom: 10px; }
+  .pa-sub          { margin-bottom: 16px; }
+  .pa-info-box     { margin-bottom: 16px; padding: 10px 14px; }
+  .pa-card .field  { margin-bottom: 14px; }
 }
 .pa-card {
   width: 100%; max-width: 440px;

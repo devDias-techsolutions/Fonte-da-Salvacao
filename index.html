@@ -96,7 +96,26 @@
   --logo-filter:      drop-shadow(0 0 12px rgba(0, 217, 198, 0.2));
   --logo-filter2: #000000;
   --scrollbar:        rgba(255, 255, 255, 0.16);
+
+  /* Gutter lateral responsivo — cresce com a largura da tela.
+     Em mobile permanece igual ao padding fixo original (16px). */
+  --gutter: 16px;
+  --gutter-lg: 16px; /* usado em seções de respiro mais generoso (módulos, listas) */
 }
+
+/* Notebooks/tablets — começa a abrir respiro nas laterais */
+@media (min-width: 900px) {
+  :root { --gutter: 56px; --gutter-lg: 88px; }
+}
+/* Telas grandes (desktop, notebooks 1440p+) */
+@media (min-width: 1280px) {
+  :root { --gutter: 88px; --gutter-lg: 136px; }
+}
+/* Monitores ultra-wide */
+@media (min-width: 1600px) {
+  :root { --gutter: 120px; --gutter-lg: 180px; }
+}
+
 
 /* ─────────────────────────────────────────────
    LIGHT MODE PREMIUM
@@ -318,6 +337,8 @@ body::after {
   min-height: 100vh; min-height: 100dvh;
   opacity: 0; transition: opacity .4s var(--ease);
   position: relative; z-index: 1;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 #app.ready { opacity: 1; }
 
@@ -413,6 +434,58 @@ body::after {
   }
   .modal-box::before { display: none; }
   .modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
+}
+
+/* ── CONFIRM MODAL (substitui window.confirm) ── */
+.confirm-box {
+  max-width: 380px; text-align: center;
+  padding: 32px 28px 28px;
+}
+.confirm-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  background: var(--teal-dim); color: var(--teal);
+}
+.confirm-icon.danger { background: var(--danger-dim); color: var(--danger); }
+.confirm-icon i { width: 24px; height: 24px; }
+.confirm-title {
+  font-size: 17px; font-weight: 800; color: var(--text);
+  margin-bottom: 8px;
+}
+.confirm-message {
+  font-size: 13.5px; color: var(--text-muted); line-height: 1.5;
+  margin-bottom: 24px;
+}
+.confirm-actions {
+  display: flex; gap: 10px;
+}
+.confirm-actions button { flex: 1; }
+
+/* ── ESTRUTURA HEADER/BODY/FOOTER — RODAPÉ SEMPRE VISÍVEL ──
+   Modais antigos (bloco único) continuam funcionando normalmente.
+   Modais que adotam .modal-header/.modal-body/.modal-footer ganham
+   automaticamente cabeçalho fixo + corpo rolável + botões sempre
+   visíveis — nunca mais cortados em telas baixas. */
+.modal-box:has(.modal-footer) {
+  display: flex; flex-direction: column;
+  overflow: hidden; /* a rolagem passa a ser só do .modal-body */
+}
+.modal-header {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.modal-header h3 { font-size: 17px; font-weight: 800; color: var(--text); }
+.modal-body {
+  flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  margin: 0 -4px; padding: 0 4px; /* evita cortar sombra/focus ring dos inputs */
+}
+.modal-footer {
+  flex-shrink: 0;
+  display: flex; gap: 10px;
+  padding-top: 16px; margin-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
 /* ─────────────────────────────────────────────
@@ -640,7 +713,7 @@ textarea { height: auto; min-height: 110px; padding: 16px 18px; resize: vertical
   position: sticky; top: 0; z-index: 200;
   height: 64px;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 var(--gutter);
   background: var(--bg-glass-strong);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(32px) saturate(180%);
@@ -780,6 +853,34 @@ textarea { height: auto; min-height: 110px; padding: 16px 18px; resize: vertical
   font-size: 11px; font-weight: 800; text-transform: uppercase;
   letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px;
 }
+
+/* ── TOPNAV APP SHELL — complemento (base já definida acima) ── */
+.topnav-left  { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.topnav-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.topnav-sep   { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; margin: 0 4px; }
+.topnav-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 10px; border: none;
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  transition: background .15s, color .15s; position: relative;
+}
+.topnav-icon-btn:hover { background: var(--bg4); color: var(--text); }
+.topnav-avatar-wrap { position: relative; }
+.notif-dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--danger); border: 1.5px solid var(--bg);
+}
+#topnav-usuarios-btn {
+  display: none; align-items: center; gap: 6px;
+  padding: 0 14px; height: 34px; border-radius: 100px;
+  border: 1.5px solid var(--teal-border); background: var(--teal-dim);
+  color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: all .2s; white-space: nowrap;
+}
+#topnav-usuarios-btn:hover { border-color: var(--teal); }
+#topnav-module-actions { display: flex; align-items: center; gap: 6px; }
 </style>
 </head>
 <body>
@@ -787,6 +888,63 @@ textarea { height: auto; min-height: 110px; padding: 16px 18px; resize: vertical
 <div class="orb orb-2"></div>
 
 <!-- ── LOADER CINEMÁTICO ── -->
+<!-- ══ APP SHELL — TOPNAV PERSISTENTE ══
+     Visível apenas em views autenticadas (controlado por renderView).
+     Dados dinâmicos (nome, avatar, perfil) injetados por updateTopnav().
+-->
+<header id="main-topnav" class="topnav" style="display:none" role="banner">
+  <div class="topnav-left">
+    <div class="topnav-logo-icon">
+      <img src="" alt="Logo AD" class="app-logo-img" style="width:28px;height:28px;object-fit:contain">
+    </div>
+    <div>
+      <div class="topnav-name">AD Fonte da Salvação</div>
+      <div class="topnav-sub">gestão ministerial</div>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <!-- Slot: ações específicas do módulo ativo -->
+    <div id="topnav-module-actions"></div>
+    <!-- Controles permanentes -->
+    <button class="topnav-icon-btn" onclick="showToast('Em breve: notificações!','info')" title="Notificações">
+      <div class="notif-dot"></div>
+      <i data-lucide="bell" style="width:17px;height:17px"></i>
+    </button>
+    <button class="theme-toggle-btn topnav-icon-btn" onclick="toggleTheme()" title="Alternar tema">
+      <i data-lucide="moon" style="width:17px;height:17px"></i>
+    </button>
+    <div class="topnav-sep"></div>
+    <button id="topnav-usuarios-btn" onclick="navigateTo('usuarios')" title="Gerenciar Usuários">
+      <i data-lucide="shield-check" style="width:15px;height:15px;color:var(--teal);flex-shrink:0"></i>
+      <span>Usuários</span>
+    </button>
+    <div class="topnav-avatar-wrap">
+      <button class="topnav-avatar-btn" onclick="toggleUserDropdown()" id="avatar-btn" title="">
+        <div class="avatar" id="topnav-initials" style="width:34px;height:34px;font-size:12px"></div>
+      </button>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="user-dd-header">
+          <div class="user-dd-nome"  id="topnav-dd-nome"></div>
+          <div class="user-dd-email" id="topnav-dd-email"></div>
+          <div style="margin-top:8px">
+            <span class="badge badge-teal" id="topnav-dd-badge"></span>
+          </div>
+        </div>
+        <button class="user-dd-item" onclick="closeDropdown();navigateTo('home')">
+          <i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard
+        </button>
+        <button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">
+          <i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha
+        </button>
+        <hr class="divider" style="margin:6px 0">
+        <button class="user-dd-item danger" onclick="handleLogout()">
+          <i data-lucide="log-out" style="width:15px;height:15px"></i> Sair
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
 <div id="app-loader">
   <div class="loader-logo">
     <img id="loader-logo-img" alt="Logo AD" class="app-logo-img" style="width:42px;height:42px;object-fit:contain">
@@ -796,7 +954,7 @@ textarea { height: auto; min-height: 110px; padding: 16px 18px; resize: vertical
 </div>
 
 <!-- ── APP ROOT ── -->
-<div id="app"></div>
+<div id="app"><div id="app-viewport"></div></div>
 
 <!-- ── TOAST CONTAINER ── -->
 <div id="toast-container" aria-live="polite"></div>
@@ -836,6 +994,9 @@ var ROUTE_PERMISSIONS = {
   'usuarios':          ['admin', 'secretaria']
 };
 
+// Views que exigem sessão ativa (topnav visível nestas)
+var authRequired = ['home', 'escola-dominical', 'membros', 'usuarios'];
+
 // Retorna a view de destino padrão para cada perfil após login
 function _homeViewForPerfil(perfil) {
   if (perfil === 'secretaria') return 'escola-dominical';
@@ -844,9 +1005,6 @@ function _homeViewForPerfil(perfil) {
 }
 
 function navigateTo(view, params) {
-  App.currentView = view;
-
-  var authRequired = ['home', 'escola-dominical', 'membros', 'usuarios'];
 
   // 1. Sem sessão → login
   if (authRequired.indexOf(view) !== -1 && !App.session) {
@@ -872,21 +1030,57 @@ function navigateTo(view, params) {
     showToast('Visualização "' + view + '" não encontrada.', 'error');
     return;
   }
+  App.currentView = view;
   window[fn](params);
 }
 
 // ── RENDER HELPER ────────────────────────────────────────
 function renderView(html) {
-  var app = document.getElementById('app');
-  app.innerHTML = '<div class="view-container">' + html + '</div>';
+  var viewport = document.getElementById('app-viewport');
+  viewport.innerHTML = '<div class="view-container">' + html + '</div>';
+
+  // Mostrar/ocultar topnav persistente conforme tipo de view
+  var topnav  = document.getElementById('main-topnav');
+  var isAuth  = authRequired.indexOf(App.currentView || '') !== -1;
+  if (topnav) topnav.style.display = isAuth ? '' : 'none';
+
+  // Limpar slot de ações do módulo anterior
+  var slot = document.getElementById('topnav-module-actions');
+  if (slot) slot.innerHTML = '';
+
   applyLogoSrc();
   if (window.lucide) lucide.createIcons();
+}
+
+// ── TOPNAV — DADOS DE SESSÃO ─────────────────────────────
+function updateTopnav(sessao) {
+  if (!sessao) return;
+  var nome   = sessao.nome   || '';
+  var email  = sessao.email  || '';
+  var perfil = sessao.perfil || '';
+  var labels = { admin: 'Administrador', secretaria: 'Secretaria', professor: 'Professor(a)' };
+  var isSec  = perfil === 'admin' || perfil === 'secretaria';
+
+  var el = function(id) { return document.getElementById(id); };
+  var initials = el('topnav-initials');
+  if (initials) initials.textContent = getInitials(nome);
+  var btn = el('avatar-btn');
+  if (btn) btn.title = nome;
+  var ddNome = el('topnav-dd-nome');
+  if (ddNome) ddNome.textContent = nome;
+  var ddEmail = el('topnav-dd-email');
+  if (ddEmail) ddEmail.textContent = email;
+  var ddBadge = el('topnav-dd-badge');
+  if (ddBadge) ddBadge.textContent = labels[perfil] || perfil;
+  var usuariosBtn = el('topnav-usuarios-btn');
+  if (usuariosBtn) usuariosBtn.style.display = isSec ? 'inline-flex' : 'none';
 }
 
 // ── SESSION STORAGE ──────────────────────────────────────
 function saveSession(sessao) {
   App.session = sessao;
   try { sessionStorage.setItem(App.TOKEN_KEY, sessao.token); } catch(e) {}
+  updateTopnav(sessao);
 }
 
 function clearSession() {
@@ -934,6 +1128,52 @@ function setBtnLoading(btn, loading) {
     btn.disabled = false;
     btn.classList.remove('loading');
   }
+}
+
+// ── CONFIRM MODAL CUSTOMIZADO — substitui window.confirm() ──
+// Uso: showConfirm('Mensagem...', { title, danger, confirmLabel, cancelLabel })
+//        .then(function(ok) { if (ok) { ...ação... } });
+// `danger: true` (padrão) estiliza o botão de confirmação em vermelho,
+// indicado para ações destrutivas (excluir, desativar).
+function showConfirm(message, opts) {
+  opts = opts || {};
+  var danger = opts.danger !== false;
+
+  return new Promise(function(resolve) {
+    var overlay = document.getElementById('confirm-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'confirm-overlay';
+      overlay.className = 'modal-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    overlay.innerHTML =
+      '<div class="modal-box confirm-box">' +
+        '<div class="confirm-icon' + (danger ? ' danger' : '') + '">' +
+          '<i data-lucide="' + (danger ? 'alert-triangle' : 'help-circle') + '"></i>' +
+        '</div>' +
+        '<div class="confirm-title">' + (opts.title || 'Confirmar ação') + '</div>' +
+        '<div class="confirm-message">' + message + '</div>' +
+        '<div class="confirm-actions">' +
+          '<button class="btn-secondary" id="confirm-cancel-btn">' + (opts.cancelLabel || 'Cancelar') + '</button>' +
+          '<button class="' + (danger ? 'btn-danger' : 'btn-primary') + '" id="confirm-ok-btn">' + (opts.confirmLabel || 'Confirmar') + '</button>' +
+        '</div>' +
+      '</div>';
+
+    requestAnimationFrame(function() { overlay.classList.add('open'); });
+    if (window.lucide) lucide.createIcons();
+
+    function close(result) {
+      overlay.classList.remove('open');
+      setTimeout(function() { overlay.innerHTML = ''; }, 280);
+      resolve(result);
+    }
+
+    document.getElementById('confirm-cancel-btn').onclick = function() { close(false); };
+    document.getElementById('confirm-ok-btn').onclick     = function() { close(true); };
+    overlay.onclick = function(e) { if (e.target === overlay) close(false); };
+  });
 }
 
 // ── SHA-256 CLIENT-SIDE ──────────────────────────────────
@@ -997,6 +1237,7 @@ function initApp() {
       .withSuccessHandler(function(res) {
         if (res && res.success) {
           App.session = res.data;
+          updateTopnav(res.data);
           if (res.data.primeiroAcesso) {
             navigateTo('primeiro-acesso');
           } else {

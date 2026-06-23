@@ -33,16 +33,6 @@ function getSSInstance() {
   return _SS;
 }
 
-// Compatibilidade: outros arquivos usam SS diretamente
-// Definir como getter para inicialização lazy
-var SS = null; // será sobrescrito abaixo
-try {
-  SS = SpreadsheetApp.openById(SPREADSHEET_ID);
-} catch(e) {
-  // Se falhar, SS ficará null e getSSInstance() será usado como fallback
-  Logger.log('Aviso: SS não inicializado no escopo global: ' + e.message);
-}
-
 // ── ENTRY POINT ─────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════
 //  doGet — Roteador principal do GAS Web App
@@ -131,13 +121,10 @@ function runMigrate() {
   SetupSheets.migrateColumns();
   }
 
-// ═══════════════════════════════════════════════════════════════
-//  Membros.gs · Módulo Membros
-//  Cadastro · Carteirinha · Backup
-//  Padrão idêntico ao EscolaDominical.gs — usa Util + Auth
-// ═══════════════════════════════════════════════════════════════
+// ── MEMBROS: módulo definido em Membros.js ───────────────────
+// Wrappers públicos abaixo — implementação em Membros.js
 
-var Membros = (function () {
+/* REMOVIDO: var Membros = (function () {
 
   var SHEET = 'Membros';
 
@@ -249,35 +236,11 @@ var Membros = (function () {
     }
   }
 
-  return {
-    setupPlanilhaMembros: setupPlanilhaMembros,
-    getMembros:           getMembros,
-    salvarMembro:         salvarMembro,
-    deletarMembro:        deletarMembro
-  };
-
-})();
-
+REMOVIDO FIM */
 
 // ── FUNÇÕES PÚBLICAS (expostas ao frontend via google.script.run) ─
-// Wrapper _safe idêntico ao usado em EscolaDominical.gs
-
-function setupPlanilhaMembros(token) {
-  try {
-    var r = Membros.setupPlanilhaMembros(token);
-    return JSON.parse(JSON.stringify(r || { success: false, error: 'Resposta vazia.' }));
-  } catch(e) { return { success: false, error: e.message }; }
-}
-
-function getMembros(token) {
-  try {
-    var r = Membros.getMembros(token);
-    return JSON.parse(JSON.stringify(r || []));
-  } catch(e) {
-    Logger.log('[getMembros público] ' + e);
-    return [];
-  }
-}
+// setupPlanilhaMembros → alias correto definido em Membros.js
+// getMembros           → migrado para mb_listarMembros em Membros.js
 
 function salvarMembro(token, membro) {
   try {
@@ -310,23 +273,10 @@ function _pingDriveWrite() {
 
 
 
-// ═══════════════════════════════════════════════════════════
-//  Auth — Recuperação de Senha
-//  Cole estas funções no seu Auth.gs (ou Code.gs).
-//
-//  Tabela "Usuarios" — colunas usadas:
-//    TokenRecupSenha, ExpirToken, SenhaHash, PrimeiroAcesso
-//
-//  CORREÇÃO CRÍTICA: o link do e-mail DEVE ter o formato:
-//    APP_URL?view=recuperar-senha&token=TOKEN
-//  O parâmetro "view" é lido pelo doGet e injetado no template.
-// ═══════════════════════════════════════════════════════════
+// solicitarRecuperacao, verificarTokenRecuperacao e redefinirSenhaToken
+// estão definidas em Auth.js com _safeCall — removidas daqui para evitar override.
 
-var RECUP_TTL_MINUTES = 60; // token expira em 60 minutos
-
-// ── SOLICITAR RECUPERAÇÃO ─────────────────────────────────
-// Chamado pelo frontend sem autenticação.
-// Retorna sempre success:true (não revela se e-mail existe).
+/* REMOVIDO — duplicatas sem _safeCall:
 function solicitarRecuperacao(email) {
   try {
     email = (email || '').toLowerCase().trim();
@@ -399,29 +349,4 @@ function verificarTokenRecuperacao(token) {
 
 // ── REDEFINIR SENHA VIA TOKEN ─────────────────────────────
 // Chamado pelo frontend com o hash da nova senha.
-function redefinirSenhaToken(token, hashNova) {
-  try {
-    if (!token || !hashNova) return Util.err('Dados incompletos.');
-
-    var user = Util.findRow('Usuarios', 'TokenRecupSenha', token);
-    if (!user) return Util.err('Link inválido ou já utilizado.');
-
-    var expira = user.ExpirToken ? new Date(user.ExpirToken) : null;
-    if (!expira || isNaN(expira) || Date.now() > expira.getTime()) {
-      return Util.err('Este link expirou. Solicite um novo.');
-    }
-
-    // Atualizar senha e invalidar token
-    var updated = {};
-    Object.keys(user).forEach(function(k) { updated[k] = user[k]; });
-    updated.SenhaHash       = hashNova;
-    updated.TokenRecupSenha = '';   // invalida o token — uso único
-    updated.ExpirToken      = '';
-    updated.PrimeiroAcesso  = false;
-    Util.updateRow('Usuarios', user._rowIndex, updated);
-
-    return Util.ok(true);
-  } catch(e) {
-    return Util.err('Erro ao redefinir senha: ' + e.message);
-  }
-}
+REMOVIDO FIM */

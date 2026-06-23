@@ -28,7 +28,7 @@
 /* ── Topnav module (idêntico ao ED) ── */
 .mb-topnav-module {
   display: flex; align-items: center; gap: 8px;
-  padding: 0 16px; height: 40px;
+  padding: 0 var(--gutter); height: 40px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-glass); backdrop-filter: blur(20px);
   position: sticky; top: 64px; z-index: 100;
@@ -52,7 +52,6 @@
   background: var(--teal-dim); color: var(--teal); border: 1px solid var(--teal-border);
   font-family: 'DM Mono', monospace; letter-spacing: .3px;
 }
-@media (min-width: 640px) { .mb-topnav-module { padding: 0 24px; } }
 @media (max-width: 480px) { .mb-topnav-crumb-tags { display: none; } }
 .topnav-right { overflow: visible !important; }
 
@@ -106,8 +105,8 @@
 .mb-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
 
 /* ── Panel ── */
-#mb-panel { padding: 16px; max-width: 1100px; margin: 0 auto; padding-bottom: 80px; overflow-x: hidden; }
-@media (min-width: 640px) { #mb-panel { padding: 20px 24px 80px; } }
+/* padding controlado via inline style no elemento (var(--gutter)) */
+#mb-panel { overflow-x: hidden; }
 
 /* ── KPI — grupos temáticos ── */
 
@@ -708,85 +707,21 @@ function _mbLoadProximoRol(cb) {
     .mb_getProximoRol(token);
 }
 
-// ── Topnav (espelha _buildEdPage da ED) ─────────────────
-function _mbBuildTopnav() {
-  var sess = App.session;
-  var ct   = document.documentElement.getAttribute('data-theme') || 'dark';
-  var ti   = ct === 'dark' ? 'moon' : 'sun';
+// ── Ações do módulo injetadas na topnav persistente (#topnav-module-actions) ──
+// Substitui a antiga <nav class="topnav"> duplicada — agora só contribui
+// com o botão específico deste módulo para o slot do App Shell (index.html).
+function _mbTopnavActions() {
   return (
-    '<nav class="topnav no-print">'+
-      '<div class="topnav-left" onclick="navigateTo(\'home\')" style="cursor:pointer">'+
-        '<div class="topnav-logo-icon">'+
-          '<img src="" alt="Logo" class="app-logo-img" style="width:28px;height:28px;object-fit:contain">'+
-        '</div>'+
-        '<div>'+
-          '<div class="topnav-logo-name">AD Fonte da Salvação</div>'+
-          '<div class="topnav-logo-sub">Gestão Ministerial</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="topnav-actions">'+
-        /* Desktop */
-        '<div class="mb-nav-desktop">'+
-          '<button class="btn btn-ghost btn-sm mb-aniv-topnav-btn" onclick="mbAbrirModalAniv()" title="Aniversariantes do mês" id="mb-aniv-topnav-btn">'+
-            '<i data-lucide="cake" style="width:18px;height:18px"></i>'+
-            '<span class="mb-aniv-badge" id="mb-aniv-badge" style="display:none"></span>'+
-          '</button>'+
-          '<button class="theme-toggle-btn btn btn-ghost btn-sm" style="width:40px;padding:0" onclick="toggleTheme()">'+
-            '<i data-lucide="'+ti+'" style="width:18px;height:18px"></i>'+
-          '</button>'+
-          '<div style="position:relative">'+
-            '<button class="topnav-avatar-btn" onclick="toggleUserDropdown()" id="avatar-btn">'+
-              '<div class="avatar">'+_mbInitials(sess ? sess.nome : '?')+'</div>'+
-            '</button>'+
-            '<div class="user-dropdown" id="user-dropdown">'+
-              '<div class="user-dd-header">'+
-                '<div class="user-dd-nome">'+_mbEsc(sess ? sess.nome : '')+'</div>'+
-                '<div class="user-dd-email">'+_mbEsc(sess ? sess.email : '')+'</div>'+
-                '<div style="margin-top:6px"><span class="badge badge-teal">'+_mbEsc(sess ? sess.perfil : '')+'</span></div>'+
-              '</div>'+
-              '<button class="user-dd-item" onclick="closeDropdown();navigateTo(\'home\')">'+
-                '<i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Dashboard'+
-              '</button>'+
-              '<button class="user-dd-item" onclick="closeDropdown();showTrocarSenha()">'+
-                '<i data-lucide="key" style="width:16px;height:16px"></i> Alterar senha'+
-              '</button>'+
-              '<hr class="divider" style="margin:6px 0">'+
-              '<button class="user-dd-item danger" onclick="handleLogout()">'+
-                '<i data-lucide="log-out" style="width:16px;height:16px"></i> Sair'+
-              '</button>'+
-            '</div>'+
-          '</div>'+
-        '</div>'+
-        /* Mobile gear */
-        '<div class="mb-nav-cfg-wrap mb-nav-gear">'+
-          '<button class="btn btn-ghost btn-sm" style="width:38px;padding:0" onclick="mbToggleNavCfg(event)">'+
-            '<i data-lucide="settings-2" style="width:18px;height:18px"></i>'+
-          '</button>'+
-          '<div class="mb-nav-cfg-dd" id="mb-nav-cfg-dd">'+
-            '<div class="cfg-label">Conta</div>'+
-            '<button onclick="mbToggleNavCfg();mbAbrirModalAniv()">'+
-              '<i data-lucide="cake" style="width:15px;height:15px"></i> Aniversariantes'+
-            '</button>'+
-            '<div class="divider"></div>'+
-            '<button onclick="mbToggleNavCfg();toggleTheme()">'+
-              '<i data-lucide="'+ti+'" style="width:15px;height:15px"></i> '+(ct==='dark'?'Modo claro':'Modo escuro')+
-            '</button>'+
-            '<div class="divider"></div>'+
-            '<button onclick="mbToggleNavCfg();navigateTo(\'home\')">'+
-              '<i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> Dashboard'+
-            '</button>'+
-            '<button onclick="mbToggleNavCfg();showTrocarSenha()">'+
-              '<i data-lucide="key" style="width:15px;height:15px"></i> Alterar senha'+
-            '</button>'+
-            '<div class="divider"></div>'+
-            '<button class="danger" onclick="handleLogout()">'+
-              '<i data-lucide="log-out" style="width:15px;height:15px"></i> Sair'+
-            '</button>'+
-          '</div>'+
-        '</div>'+
-      '</div>'+
-    '</nav>'+
-    /* Breadcrumb (idêntico ao ED) */
+    '<button class="btn btn-ghost btn-sm mb-aniv-topnav-btn" onclick="mbAbrirModalAniv()" title="Aniversariantes do mês" id="mb-aniv-topnav-btn">'+
+      '<i data-lucide="cake" style="width:18px;height:18px"></i>'+
+      '<span class="mb-aniv-badge" id="mb-aniv-badge" style="display:none"></span>'+
+    '</button>'
+  );
+}
+
+// ── Breadcrumb do módulo (abaixo da topnav persistente) ─────
+function _mbBuildTopnav() {
+  return (
     '<div class="mb-topnav-module no-print">'+
       '<button class="mb-topnav-module-back" onclick="navigateTo(\'home\')" title="Voltar">'+
         '<i data-lucide="arrow-left" style="width:14px;height:14px"></i>'+
@@ -824,7 +759,7 @@ function renderMembros() {
   renderView(
     _mbBuildTopnav() +
     _mbBuildTabs()   +
-    '<div id="mb-panel" style="padding:16px;max-width:1100px;margin:0 auto;padding-bottom:80px"></div>' +
+    '<div id="mb-panel" style="padding:16px var(--gutter);max-width:1100px;margin:0 auto;padding-bottom:80px"></div>' +
     _mbModalConfirmHtml() +
     _modalTrocarSenha() +
     '<div class="modal-overlay" id="modal-mb-aniv" onclick="if(event.target===this)mbFecharModalAniv()">'+
@@ -845,6 +780,9 @@ function renderMembros() {
       '</div>'+
     '</div>'
   );
+
+  var slot = document.getElementById('topnav-module-actions');
+  if (slot) slot.innerHTML = _mbTopnavActions();
 
   setTimeout(function(){
     if (window.lucide) lucide.createIcons();
@@ -2874,21 +2812,33 @@ function mbCard_gerarLote() {
   // 5 carteirinhas/página: MARGIN=8, GAP=2 → altura total=293.9mm (A4=297mm)
   var CW = 85.6, CH = 53.98, MARGIN = 8, GAP = 2, POR_PAG = 5;
 
-  // ── Linhas de sangria: linhas horizontais e verticais que cruzam a folha inteira ──
-  // Facilita o alinhamento na guilhotina — cada linha vai de borda a borda da folha A4.
+  // ── Sangria real + linha de corte no limite exato do CR80 ──
+  // A arte (frente/verso) é impressa MAIOR que o CR80 — estendida BLEED mm
+  // para fora em cada lado — e a linha de corte fica exatamente na borda
+  // real do CR80 (85,6×53,98mm). Assim, cortando em cima da linha o cartão
+  // sai nas medidas exatas, e qualquer variação leve no corte (até BLEED mm
+  // para dentro ou para fora) ainda encontra cor, nunca papel branco.
   var A4W = 210, A4H = 297; // mm
+  var BLEED = 1; // mm — sangria real. GAP entre cartões é 2mm: cada lado sangra 1mm,
+                 // os dois vizinhos se encontram exatamente no meio do gap, sem sobrepor
+                 // e sem deixar faixa branca entre eles.
   function _desenharSangria(pdf, xL, xR, y, cw, ch) {
-    // xL = x da frente, xR = x do verso, y = topo da linha, cw = largura do card, ch = altura
+    // xL = x da frente, xR = x do verso, y = topo do card, cw = largura do CR80, ch = altura
     pdf.setDrawColor(180, 180, 180);
     pdf.setLineWidth(0.12);
     pdf.setLineDashPattern([1.5, 1.2], 0);
 
-    // Horizontais: topo e fundo de cada linha de carteirinhas — cruzam toda a largura A4
-    pdf.line(0, y,      A4W, y);       // topo
-    pdf.line(0, y + ch, A4W, y + ch);  // fundo
+    // Horizontais — exatamente na borda real do CR80 (topo e fundo)
+    pdf.line(0, y,      A4W, y);      // topo do card (limite exato CR80)
+    pdf.line(0, y + ch, A4W, y + ch); // fundo do card (limite exato CR80)
 
-    // Verticais: bordas esquerda e direita de cada carteirinha (frente e verso) — cruzam toda a altura A4
-    [xL, xL + cw, xR, xR + cw].forEach(function(xv) {
+    // Verticais — exatamente nas bordas reais do CR80 (frente e verso)
+    [
+      xL,       // borda esq da frente (limite exato CR80)
+      xL + cw,  // borda dir da frente (limite exato CR80)
+      xR,       // borda esq do verso  (limite exato CR80)
+      xR + cw   // borda dir do verso  (limite exato CR80)
+    ].forEach(function(xv) {
       pdf.line(xv, 0, xv, A4H);
     });
 
@@ -2924,11 +2874,12 @@ function mbCard_gerarLote() {
     );
 
     mbCard_capturar(m, false).then(function(frontImg) {
-      pdf.addImage(frontImg, 'JPEG', MARGIN, yPos, CW, CH, undefined, 'FAST');
+      // Arte estendida BLEED mm para fora em cada lado — cobre além da linha de corte
+      pdf.addImage(frontImg, 'JPEG', MARGIN - BLEED, yPos - BLEED, CW + 2*BLEED, CH + 2*BLEED, undefined, 'FAST');
       return mbCard_capturar(m, true);
     }).then(function(backImg) {
-      pdf.addImage(backImg, 'JPEG', xBack, yPos, CW, CH, undefined, 'FAST');
-      // Sangria tracejada ao redor de cada par frente+verso
+      pdf.addImage(backImg, 'JPEG', xBack - BLEED, yPos - BLEED, CW + 2*BLEED, CH + 2*BLEED, undefined, 'FAST');
+      // Linha de corte no limite exato do CR80, com sangria cobrindo além dela
       _desenharSangria(pdf, MARGIN, xBack, yPos, CW, CH);
       processarMembro(idx + 1);
     }).catch(function(e) {

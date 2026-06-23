@@ -48,8 +48,7 @@ var Usuarios = (function () {
   // ── LISTAR USUÁRIOS ───────────────────────────────────────
   // Chamado por: _home.html (modal) e _usuarios.html
   function usr_listar(token) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       _checkAcesso(sessao);
 
       var rows = Util.sheetToObjects(SHEET);
@@ -66,7 +65,7 @@ var Usuarios = (function () {
       });
 
       return Util.ok(dados);
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── CRIAR USUÁRIO ─────────────────────────────────────────
@@ -74,8 +73,7 @@ var Usuarios = (function () {
   // dados: { Nome, Email, Perfil, SenhaHash }
   // Se SenhaHash === '' → gera senha aleatória e envia por e-mail
   function usr_criar(token, dados) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       _checkAcesso(sessao);
 
       var nome   = (dados.Nome  || '').trim();
@@ -126,15 +124,14 @@ var Usuarios = (function () {
       _enviarBoasVindas(nome, email, senhaProvisoria);
 
       return Util.ok({ email: email });
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── EDITAR USUÁRIO ────────────────────────────────────────
   // Chamado por: _home.html (modal) e _usuarios.html
   // dados: { Nome, Perfil }
   function usr_editar(token, id, dados) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       _checkAcesso(sessao);
 
       var alvo = Util.findById(SHEET, id);
@@ -159,14 +156,13 @@ var Usuarios = (function () {
 
       Util.updateRow(SHEET, alvo._rowIndex, _build(alvo, changes));
       return Util.ok(true);
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── RESETAR SENHA (admin only) ────────────────────────────
   // Chamado por: _usuarios.html
   function usr_resetarSenha(token, id, hashNova) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       if (sessao.perfil !== PERFIS.ADMIN) {
         return Util.err('Apenas administradores podem resetar senhas.');
       }
@@ -180,14 +176,13 @@ var Usuarios = (function () {
       }));
 
       return Util.ok(true);
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── ATIVAR / DESATIVAR ────────────────────────────────────
   // Chamado por: _usuarios.html
   function usr_alterarStatus(token, id, ativar) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       _checkAcesso(sessao);
 
       var alvo = Util.findById(SHEET, id);
@@ -201,14 +196,13 @@ var Usuarios = (function () {
 
       Util.updateRow(SHEET, alvo._rowIndex, _build(alvo, { Ativo: ativar === true }));
       return Util.ok(true);
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── LISTAR PERMISSÕES ─────────────────────────────────────
   // Retorna o JSON salvo na aba "Permissoes" (linha 1 = chave "matrix")
   function usr_listarPermissoes(token) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       _checkAcesso(sessao);
 
       var rows = Util.sheetToObjects('Permissoes');
@@ -216,15 +210,14 @@ var Usuarios = (function () {
       if (!row || !row.Valor) return Util.ok(null); // sem customização salva
 
       return Util.ok(JSON.parse(row.Valor));
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── SALVAR PERMISSÕES ─────────────────────────────────────
   // Persiste o JSON da matriz na aba "Permissoes", coluna Chave="matrix"
   // Só admin pode salvar.
   function usr_salvarPermissoes(token, matrizJson) {
-    try {
-      var sessao = Auth._auth(token);
+    return withAuth(token, function(sessao) {
       if (sessao.perfil !== PERFIS.ADMIN) {
         return Util.err('Apenas administradores podem alterar permissões.');
       }
@@ -271,7 +264,7 @@ var Usuarios = (function () {
       SpreadsheetApp.flush();
       Logger.log('[Permissoes] Matriz salva por ' + sessao.email + ' em ' + agora);
       return Util.ok(true);
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   // ── HELPERS PRIVADOS ──────────────────────────────────────

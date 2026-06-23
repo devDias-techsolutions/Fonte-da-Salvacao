@@ -132,7 +132,7 @@
 
 /* ── HERO ── */
 .home-hero {
-  padding: 16px 18px 52px; position: relative; overflow: hidden;
+  padding: 32px var(--gutter) 52px; position: relative; overflow: hidden;
   background: linear-gradient(175deg, #050e18 0%, #071825 55%, #050e18 100%);
 }
 [data-theme="light"] .home-hero {
@@ -165,7 +165,7 @@
 [data-theme="light"] .home-hero .hero-badge-role { color: #00FFF0 !important; }
 
 /* ── KPI GRID ── */
-.kpi-grid-wrapper { padding: 0 14px; margin-top: -32px; position: relative; z-index: 10; margin-bottom: 28px; }
+.kpi-grid-wrapper { padding: 0 var(--gutter); margin-top: -32px; position: relative; z-index: 10; margin-bottom: 28px; }
 .kpi-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
 @media (min-width: 640px) { .kpi-grid { grid-template-columns: repeat(4,1fr); } }
 
@@ -248,7 +248,7 @@
 .kpi-ghost i { width: 90px; height: 90px; display: block; }
 
 /* ── MÓDULOS & SEÇÕES ── */
-.home-section { padding: 0 16px; margin-bottom: 28px; }
+.home-section { padding: 0 var(--gutter-lg); margin-bottom: 28px; }
 .section-label { font-size: 10px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim); font-family: 'DM Mono',monospace; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
 .section-label::after { content:''; flex:1; height:1px; background: var(--border); }
 
@@ -312,102 +312,8 @@ function renderHome() {
     professor:  'Professor(a)'
   }[perfil] || perfil;
 
-  var isAdmin = perfil === PERFIS_CLIENT.ADMIN;
-  var isSec   = perfil === PERFIS_CLIENT.SECRETARIA || isAdmin;
 
   renderView(
-    /* ══ TOP NAV IMPECÁVEL ══ */
-    '<header class=\"topnav\">' +
-      '<div class=\"topnav-left\">' +
-        '<div class=\"topnav-logo-icon\">' +
-          '<img src=\"\" alt=\"Logo AD\" class=\"app-logo-img\" style=\"width:28px;height:28px;object-fit:contain\">' +
-        '</div>' +
-        '<div>' +
-          '<div class=\"topnav-name\">AD Fonte da Salvação</div>' +
-          '<div class=\"topnav-sub\">gestão ministerial</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class=\"topnav-right\">' +
-
-        /* ── Botões desktop ── */
-        '<div class=\"home-nav-desktop\" style=\"display:flex;align-items:center;gap:6px\">' +
-          '<button class=\"topnav-icon-btn\" style=\"position:relative\" onclick=\"showToast(\'Em breve: notificações!\', \'info\')\" title=\"Notificações\">' +
-            '<div class=\"notif-dot\"></div>' +
-            '<i data-lucide=\"bell\" style=\"width:17px;height:17px\"></i>' +
-          '</button>' +
-          '<button class=\"theme-toggle-btn topnav-icon-btn\" onclick=\"toggleTheme()\" title=\"Alternar tema\">' +
-            '<i data-lucide=\"moon\" style=\"width:17px;height:17px\"></i>' +
-          '</button>' +
-          '<div class=\"topnav-sep\"></div>' +
-          (isSec ? '<button onclick=\"navigateTo(\'usuarios\')\" title=\"Gerenciar Usuários\" style=\"display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:100px;border:1.5px solid var(--teal-border);background:var(--teal-dim);color:var(--text);font-family:\'Plus Jakarta Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:.1px\">' +
-            '<i data-lucide=\"shield-check\" style=\"width:15px;height:15px;color:var(--teal);flex-shrink:0\"></i>' +
-            '<span class=\"home-usr-label\">Usuários</span>' +
-          '</button>' : '') +
-          '<div class=\"topnav-avatar-wrap\">' +
-            '<button class=\"topnav-avatar-btn\" onclick=\"toggleUserDropdown()\" id=\"avatar-btn\" title=\"' + nome + '\">' +
-              '<div class=\"avatar\" style=\"width:34px;height:34px;font-size:12px\">' + getInitials(nome) + '</div>' +
-            '</button>' +
-            '<div class=\"user-dropdown\" id=\"user-dropdown\">' +
-              '<div class=\"user-dd-header\">' +
-                '<div class=\"user-dd-nome\">' + nome + '</div>' +
-                '<div class=\"user-dd-email\">' + (App.session.email || '') + '</div>' +
-                '<div style=\"margin-top:8px\">' +
-                  '<span class=\"badge badge-teal\">' + perfilLabel + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<button class=\"user-dd-item\" onclick=\"closeDropdown(); navigateTo(\'home\')\">' +
-                '<i data-lucide=\"layout-dashboard\" style=\"width:15px;height:15px\"></i> Dashboard' +
-              '</button>' +
-              '<button class=\"user-dd-item\" onclick=\"closeDropdown(); showTrocarSenha()\">' +
-                '<i data-lucide=\"key\" style=\"width:15px;height:15px\"></i> Alterar senha' +
-              '</button>' +
-              '<hr class=\"divider\" style=\"margin:6px 0\">' +
-              '<button class=\"user-dd-item danger\" onclick=\"handleLogout()\">' +
-                '<i data-lucide=\"log-out\" style=\"width:15px;height:15px\"></i> Sair' +
-              '</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-
-        /* ── Engrenagem mobile ── */
-        '<div class=\"home-nav-cfg-wrap\">' +
-          '<button class=\"topnav-icon-btn\" onclick=\"homeToggleNavCfg(event)\" title=\"Menu\">' +
-            '<i data-lucide=\"settings-2\" style=\"width:17px;height:17px\"></i>' +
-          '</button>' +
-          '<div class=\"home-nav-cfg-dd\" id=\"home-nav-cfg-dd\">' +
-            '<div class=\"cfg-label\">Conta</div>' +
-            '<div class=\"home-nav-cfg-item\">' +
-              '<div class=\"avatar\" style=\"width:28px;height:28px;font-size:11px;flex-shrink:0\">' + getInitials(nome) + '</div>' +
-              '<div style=\"min-width:0\">' +
-                '<div style=\"font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">' + nome + '</div>' +
-                '<div style=\"font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">' + (App.session.email || '') + '</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class=\"cfg-divider\"></div>' +
-            '<button class=\"theme-toggle-btn\" onclick=\"homeToggleNavCfg();toggleTheme()\">' +
-              '<i data-lucide=\"moon\" style=\"width:15px;height:15px\"></i> Alternar tema' +
-            '</button>' +
-            '<button onclick=\"homeToggleNavCfg();showToast(\'Em breve: notificações!\',\'info\')\">' +
-              '<i data-lucide=\"bell\" style=\"width:15px;height:15px\"></i> Notificações' +
-            '</button>' +
-            '<div class=\"cfg-divider\"></div>' +
-            '<button onclick=\"homeToggleNavCfg();navigateTo(\'home\')\">' +
-              '<i data-lucide=\"layout-dashboard\" style=\"width:15px;height:15px\"></i> Dashboard' +
-            '</button>' +
-            (isSec ? '<button onclick=\"homeToggleNavCfg();navigateTo(\'usuarios\')\"><i data-lucide=\"shield-check\" style=\"width:15px;height:15px;color:var(--teal)\"></i> Usuários</button>' : '') +
-            '<button onclick=\"homeToggleNavCfg();showTrocarSenha()\">' +
-              '<i data-lucide=\"key\" style=\"width:15px;height:15px\"></i> Alterar senha' +
-            '</button>' +
-            '<div class=\"cfg-divider\"></div>' +
-            '<button class=\"danger\" onclick=\"handleLogout()\">' +
-              '<i data-lucide=\"log-out\" style=\"width:15px;height:15px\"></i> Sair' +
-            '</button>' +
-          '</div>' +
-        '</div>' +
-
-      '</div>' +
-    '</header>' +
-
     /* ══ HERO COMPACTO ══ */
     '<div class=\"home-hero\">' +
       '<div class=\"hero-lines\"></div>' +
@@ -430,7 +336,7 @@ function renderHome() {
     '<div class=\"home-content\">' +
 
     /* ══ MÓDULOS ══ */
-    '<div style=\"padding:0 16px\">' +
+    '<div style=\"padding:0 36px\">' +
       '<div class=\"section-label\">Módulos</div>' +
       '<div class=\"modules-grid\">' +
         _moduleBtn('graduation-cap', 'Escola Dominical', 'Classes, alunos e chamadas', 'escola-dominical', false) +
@@ -442,7 +348,7 @@ function renderHome() {
     '</div>' +
 
     /* ══ ATIVIDADE RECENTE ══ */
-    '<div style=\"padding:0 16px;margin-top:28px\">' +
+    '<div style=\"padding:0 36px;margin-top:28px\">' +
       '<div class=\"section-label\">Atividade Recente</div>' +
       '<div class=\"activity-list\" id=\"activity-list\">' +
         '<div class=\"activity-item\">' +

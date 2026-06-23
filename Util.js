@@ -4,6 +4,12 @@
 
 var Util = (function () {
 
+  var _executionCache = {};
+
+  function _invalidateCache(sheetName) {
+    _executionCache[sheetName] = null;
+  }
+
   function uuid() {
     return Utilities.getUuid();
   }
@@ -30,6 +36,7 @@ var Util = (function () {
   }
 
   function sheetToObjects(sheetName) {
+    if (_executionCache[sheetName]) return _executionCache[sheetName];
     var sheet = getSheet(sheetName);
     var data  = sheet.getDataRange().getValues();
     if (data.length <= 1) return [];
@@ -43,6 +50,7 @@ var Util = (function () {
       row._rowIndex = i + 1;
       rows.push(row);
     }
+    _executionCache[sheetName] = rows;
     return rows;
   }
 
@@ -61,6 +69,7 @@ var Util = (function () {
   }
 
   function insertRow(sheetName, data) {
+    _invalidateCache(sheetName);
     var sheet   = getSheet(sheetName);
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var row     = headers.map(function(h) { return data[h] !== undefined ? data[h] : ''; });
@@ -68,6 +77,7 @@ var Util = (function () {
   }
 
   function updateRow(sheetName, rowIndex, data) {
+    _invalidateCache(sheetName);
     var sheet   = getSheet(sheetName);
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var row     = headers.map(function(h) { return data[h] !== undefined ? data[h] : ''; });

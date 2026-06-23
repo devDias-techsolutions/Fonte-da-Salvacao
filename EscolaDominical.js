@@ -57,8 +57,7 @@ var EscolaDominical = (function () {
   // ══════════════════════════════════════════
 
   function listarClasses(token) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       var ok = _classesDoProfessor(sess);
       var rows = _safeSheetObjects('Classes').filter(function(r) {
         if (!_isAtivo(r.Ativo)) return false;
@@ -66,19 +65,17 @@ var EscolaDominical = (function () {
         return true;
       });
       return Util.ok(_strip(rows));
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function listarClassesTodas(token) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       return Util.ok(_strip(_safeSheetObjects('Classes')));
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function criarClasse(token, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
       if (!dados.Nome || !dados.Nome.trim()) return Util.err('Nome da classe é obrigatório.');
 
@@ -97,12 +94,11 @@ var EscolaDominical = (function () {
         CriadoEm:   Util.now()
       });
       return Util.ok({ id: id, mensagem: 'Classe criada com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function editarClasse(token, id, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
 
       var row = Util.findById('Classes', id);
@@ -126,12 +122,11 @@ var EscolaDominical = (function () {
       };
       Util.updateRow('Classes', row._rowIndex, atualizado);
       return Util.ok({ mensagem: 'Classe atualizada com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function excluirClasse(token, id) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
 
       var row = Util.findById('Classes', id);
@@ -149,7 +144,7 @@ var EscolaDominical = (function () {
       };
       Util.updateRow('Classes', row._rowIndex, atualizado);
       return Util.ok({ mensagem: 'Classe desativada com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══════════════════════════════════════════
@@ -157,8 +152,7 @@ var EscolaDominical = (function () {
   // ══════════════════════════════════════════
 
   function listarAlunos(token, classeId) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       var ok = _classesDoProfessor(sess);
       var rows = _safeSheetObjects('Alunos').filter(function(r) {
         if (!_isAtivo(r.Ativo)) return false;
@@ -167,12 +161,11 @@ var EscolaDominical = (function () {
         return true;
       });
       return Util.ok(_strip(rows));
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function criarAluno(token, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
       if (!dados.Nome || !dados.Nome.trim()) return Util.err('Nome do aluno é obrigatório.');
       if (!dados.ClasseID) return Util.err('Classe é obrigatória.');
@@ -194,12 +187,11 @@ var EscolaDominical = (function () {
         CriadoEm:   Util.now()
       });
       return Util.ok({ id: id, mensagem: 'Aluno cadastrado com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function editarAluno(token, id, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
 
       var row = Util.findById('Alunos', id);
@@ -223,12 +215,11 @@ var EscolaDominical = (function () {
         CriadoEm:   row.CriadoEm
       });
       return Util.ok({ mensagem: 'Aluno atualizado com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function excluirAluno(token, id) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
 
       var row = Util.findById('Alunos', id);
@@ -240,7 +231,7 @@ var EscolaDominical = (function () {
         TotalPontos: row.TotalPontos, Ativo: false, CriadoEm: row.CriadoEm
       });
       return Util.ok({ mensagem: 'Aluno desativado com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══════════════════════════════════════════
@@ -248,18 +239,16 @@ var EscolaDominical = (function () {
   // ══════════════════════════════════════════
 
   function listarProfessores(token) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var rows = _safeSheetObjects('Professores').filter(function (r) {
         return _isAtivo(r.Ativo);
       });
       return Util.ok(_strip(rows));
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function criarProfessor(token, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
       if (!dados.Nome || !dados.Nome.trim()) return Util.err('Nome é obrigatório.');
 
@@ -280,12 +269,11 @@ var EscolaDominical = (function () {
         CriadoEm:     Util.now()
       });
       return Util.ok({ id: id, mensagem: 'Professor cadastrado com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function editarProfessor(token, id, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
 
       var row = Util.findById('Professores', id);
@@ -307,12 +295,11 @@ var EscolaDominical = (function () {
         CriadoEm:     row.CriadoEm
       });
       return Util.ok({ mensagem: 'Professor atualizado com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function excluirProfessor(token, id) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
 
       var row = Util.findById('Professores', id);
@@ -325,7 +312,7 @@ var EscolaDominical = (function () {
         Cursos: row.Cursos, NumeroWA: row.NumeroWA, Ativo: false, CriadoEm: row.CriadoEm
       });
       return Util.ok({ mensagem: 'Professor desativado com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══════════════════════════════════════════
@@ -333,8 +320,7 @@ var EscolaDominical = (function () {
   // ══════════════════════════════════════════
 
   function listarAulas(token, filtros) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       filtros = filtros || {};
       var rows = _safeSheetObjects('Aulas');
       if (filtros.ano)       rows = rows.filter(function(r) { return String(r.Ano) === String(filtros.ano); });
@@ -344,12 +330,11 @@ var EscolaDominical = (function () {
         return db - da;
       });
       return Util.ok(rows);
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function criarAula(token, dados) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (!dados.Trimestre || !dados.NumLicao) {
         return Util.err('Trimestre e número da lição são obrigatórios.');
       }
@@ -365,12 +350,11 @@ var EscolaDominical = (function () {
         CriadoEm: Util.now()
       });
       return Util.ok({ id: id, mensagem: 'Aula registrada com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function editarAula(token, id, dados) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var row = Util.findById('Aulas', id);
       if (!row) return Util.err('Aula não encontrada.');
       Util.updateRow('Aulas', row._rowIndex, {
@@ -384,12 +368,11 @@ var EscolaDominical = (function () {
         CriadoEm: row.CriadoEm
       });
       return Util.ok({ mensagem: 'Aula atualizada com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function excluirAula(token, id) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (sess.perfil === 'professor') return Util.err('Sem permissão.');
       var sheet = Util.getSheet('Aulas');
       var rows  = _safeSheetObjects('Aulas');
@@ -400,7 +383,7 @@ var EscolaDominical = (function () {
       if (!row) return Util.err('Aula não encontrada.');
       sheet.deleteRow(row._rowIndex);
       return Util.ok({ mensagem: 'Aula excluída com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══════════════════════════════════════════
@@ -408,8 +391,7 @@ var EscolaDominical = (function () {
   // ══════════════════════════════════════════
 
   function getChamada(token, aulaId, classeId) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (!aulaId || !classeId) return Util.err('aulaId e classeId são obrigatórios.');
       var ok = _classesDoProfessor(sess);
       if (ok !== null && !ok[String(classeId)]) return Util.err('Sem permissão para acessar esta turma.');
@@ -487,12 +469,11 @@ var EscolaDominical = (function () {
       };
 
       return Util.ok({ alunos: resultado, extras: extras, jaLancada: chamadas.length > 0, turmaInfo: turmaInfo });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function salvarChamada(token, aulaId, classeId, registros, turmaInfo) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (!aulaId || !classeId || !registros) return Util.err('Dados incompletos.');
       var ok = _classesDoProfessor(sess);
       if (ok !== null && !ok[String(classeId)]) return Util.err('Sem permissão para registrar chamada nesta turma.');
@@ -574,12 +555,11 @@ var EscolaDominical = (function () {
       }
 
       return Util.ok({ mensagem: 'Chamada salva com sucesso.' });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function listarChamadasPorAula(token, aulaId) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       var ok = _classesDoProfessor(sess);
       var chamadas = _safeSheetObjects('Chamadas').filter(function(r) {
         if (r.AulaID !== aulaId) return false;
@@ -592,12 +572,11 @@ var EscolaDominical = (function () {
         return true;
       });
       return Util.ok({ chamadas: chamadas, infoTurmas: infoTurmas });
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   function getRankingAlunos(token, classeId) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       var ok = _classesDoProfessor(sess);
       var filtro = classeId || null;
       var alunos = _safeSheetObjects('Alunos').filter(function(r) {
@@ -610,9 +589,12 @@ var EscolaDominical = (function () {
         return (Number(b.TotalPontos) || 0) - (Number(a.TotalPontos) || 0);
       });
       return Util.ok(alunos);
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
+  // NOTA: NÃO migrada para withAuth de propósito — aceita token ausente
+  // ou 'dummy-token' (sess fica null, sem filtro de turma aplicado).
+  // Nenhum chamador atual envia isso, mas o contrato é preservado.
   function getEstatisticasGerais(token) {
     try {
       var sess = (token && token !== 'dummy-token') ? Auth._auth(token) : null;
@@ -655,8 +637,7 @@ var EscolaDominical = (function () {
   }
 
   function getPontosExtras(token) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var EXCLUIR_EXATOS = ['questionário', 'questionario'];
       var rows = _safeSheetObjects('PontosExtras').filter(function (r) {
         if (!_isAtivo(r.Ativo)) return false;
@@ -664,7 +645,7 @@ var EscolaDominical = (function () {
         return EXCLUIR_EXATOS.indexOf(nome) === -1;
       });
       return Util.ok(rows);
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══════════════════════════════════════════
@@ -673,8 +654,7 @@ var EscolaDominical = (function () {
 
   // Resumo por classe: total de alunos, presença média, última aula
   function getResumoClasses(token) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       var ok = _classesDoProfessor(sess);
       var classes = _safeSheetObjects('Classes').filter(function(r) {
         if (!_isAtivo(r.Ativo)) return false;
@@ -736,13 +716,12 @@ var EscolaDominical = (function () {
       });
 
       return Util.ok(resumo);
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // Resumo por aula: presença geral, ofertas totais, classes participantes
   function getResumoAulas(token) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var aulas    = _safeSheetObjects('Aulas');
       var chamadas = _safeSheetObjects('Chamadas');
       var classes  = _safeSheetObjects('Classes');
@@ -783,13 +762,12 @@ var EscolaDominical = (function () {
       });
 
       return Util.ok(resumo);
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // Carga inicial em uma única chamada — elimina cascatas no frontend
   function getDadosIniciais(token, tabs) {
-    try {
-      var sess = Auth._auth(token);
+    return withAuth(token, function(sess) {
       var ok = _classesDoProfessor(sess);
       tabs = tabs || [];
       var result = {};
@@ -837,7 +815,7 @@ var EscolaDominical = (function () {
       }
 
       return Util.ok(result);
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══════════════════════════════════════════
@@ -1118,16 +1096,15 @@ var EscolaDominical = (function () {
   }
 
   function getConfigAlertas(token) {
-    try { Auth._auth(token); return Util.ok(_getConfigAlertas()); } catch(e) { return Util.err(e.message); }
+    return withAuth(token, function(sess) { return Util.ok(_getConfigAlertas()); });
   }
 
   function salvarConfigAlertas(token, config) {
-    try { Auth._auth(token); _setConfigAlertas(config); return Util.ok(true); } catch(e) { return Util.err(e.message); }
+    return withAuth(token, function(sess) { _setConfigAlertas(config); return Util.ok(true); });
   }
 
   function dispararAlertaManual(token, tipo) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var cfg = _getConfigAlertas();
       if (!cfg.email_ativo) return Util.err('Email não ativo. Configure e ative primeiro.');
 
@@ -1169,7 +1146,7 @@ var EscolaDominical = (function () {
         return Util.ok(true);
       }
       return Util.ok(true);
-    } catch(e) { return Util.err(e.message); }
+    });
   }
 
   function alertaDiario()      { _alertaDiarioFn(); }
@@ -1271,8 +1248,7 @@ function ed_alertaSegundaFeira(){ EscolaDominical.alertaSegundaFeira(); }
 
 // Configurar triggers GAS — chamado manualmente pelo admin via frontend
 function ed_setupAlertaTriggers(token) {
-  try {
-    var sess = Auth._auth(token);
+  return withAuth(token, function(sess) {
     if (sess.perfil === 'professor') return { success: false, error: 'Sem permissão.' };
     // Remove triggers existentes de alertas ED
     ScriptApp.getProjectTriggers().forEach(function(t) {
@@ -1286,5 +1262,5 @@ function ed_setupAlertaTriggers(token) {
     ScriptApp.newTrigger('ed_alertaDiario')
       .timeBased().everyDays(1).atHour(8).create();
     return { success: true, data: { triggers: 2 } };
-  } catch(e) { return { success: false, error: e.message }; }
+  });
 }

@@ -6,9 +6,7 @@ var Dashboard = (function () {
 
   // ── KPIs DA HOME ─────────────────────────────────────────
   function getKpisHome(token) {
-    try {
-      Auth._auth(token);
-
+    return withAuth(token, function(sess) {
       var membros     = Util.sheetToObjects('Membros').filter(function(r)     { return r.ativo === true || r.ativo === 1 || String(r.ativo).trim().toUpperCase() === 'TRUE'; });
       var alunos      = Util.sheetToObjects('Alunos').filter(function(r)      { return r.Ativo === true || r.Ativo === 'TRUE'; });
       var professores = Util.sheetToObjects('Professores').filter(function(r) { return r.Ativo === true || r.Ativo === 'TRUE'; });
@@ -20,16 +18,12 @@ var Dashboard = (function () {
         professores: professores.length,
         turmas:      turmas.length
       });
-    } catch (e) {
-      return Util.err(e.message);
-    }
+    });
   }
 
   // ── ATIVIDADE RECENTE ─────────────────────────────────────
   function getAtividadeRecente(token) {
-    try {
-      Auth._auth(token);
-
+    return withAuth(token, function(sess) {
       var atividades = [];
 
       // Últimas aulas criadas
@@ -72,9 +66,7 @@ var Dashboard = (function () {
       atividades.sort(function(a, b) { return b.ts - a.ts; });
 
       return Util.ok(atividades.slice(0, 5));
-    } catch (e) {
-      return Util.err(e.message);
-    }
+    });
   }
 
   // ── HELPER: tempo relativo ────────────────────────────────
@@ -110,5 +102,5 @@ var Dashboard = (function () {
 })();
 
 // ── FUNÇÕES PÚBLICAS ──────────────────────────────────────
-function getKpisHome(token)         { return Dashboard.getKpisHome(token); }
-function getAtividadeRecente(token) { return Dashboard.getAtividadeRecente(token); }
+function getKpisHome(token)         { return _safeCall(function(){ return Dashboard.getKpisHome(token); }); }
+function getAtividadeRecente(token) { return _safeCall(function(){ return Dashboard.getAtividadeRecente(token); }); }

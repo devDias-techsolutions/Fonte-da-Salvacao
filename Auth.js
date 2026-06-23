@@ -258,6 +258,29 @@ function _safeCall(fn) {
   }
 }
 
+// ── withAuth — VALIDAÇÃO CENTRALIZADA DE SESSÃO (Fase 4.1) ────
+// Substitui o padrão repetido "var sess = Auth._auth(token); try/catch"
+// dentro de cada função de negócio. O módulo de negócio recebe `sess`
+// já validado e foca exclusivamente na lógica de dados.
+//
+// Uso:
+//   function getKpisHome(token) {
+//     return withAuth(token, function(sess) {
+//       ... lógica usando sess.perfil, sess.id etc. ...
+//       return Util.ok(dados);
+//     });
+//   }
+function withAuth(token, fn) {
+  try {
+    var sess = Auth._auth(token); // lança se token ausente/inválido/expirado
+    var r = fn(sess);
+    return r != null ? r : Util.err('Resposta vazia do servidor.');
+  } catch (e) {
+    Logger.log('[withAuth] ' + e.message);
+    return Util.err(e.message || 'Erro interno.');
+  }
+}
+
 function login(email, senhaHash)          { return _safeCall(function(){ return Auth.login(email, senhaHash); }); }
 function logout(token)                     { return _safeCall(function(){ return Auth.logout(token); }); }
 function getSession(token)                 { return _safeCall(function(){ return Auth.getSession(token); }); }

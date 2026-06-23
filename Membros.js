@@ -92,8 +92,7 @@ var Membros = (function () {
 
   // ══ LISTAR ══════════════════════════════════════════════
   function listarMembros(token) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var CAMPOS_DATA = ['nascimento', 'batismo'];
       var rows = _safeRows().map(function (r) {
         r.ativo = _isAtivo(r.ativo);
@@ -103,23 +102,18 @@ var Membros = (function () {
         return r;
       });
       return Util.ok(_strip(rows));
-    } catch (e) {
-      Logger.log('[Membros] listarMembros: ' + e);
-      return Util.err(e.message);
-    }
+    });
   }
 
   function getProximoRol(token) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       return Util.ok(_proximoRol());
-    } catch (e) { return Util.err(e.message); }
+    });
   }
 
   // ══ SALVAR (insert ou update por 'id') ══════════════════
   function salvarMembro(token, dados) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (!dados) return Util.err('Dados nao informados.');
       if (!dados.nome || !String(dados.nome).trim()) return Util.err('Nome e obrigatorio.');
 
@@ -160,16 +154,12 @@ var Membros = (function () {
         sh.appendRow(row);
         return Util.ok({ id: dados.id, mensagem: 'Membro cadastrado com sucesso.' });
       }
-    } catch (e) {
-      Logger.log('[Membros] salvarMembro: ' + e);
-      return Util.err(e.message);
-    }
+    });
   }
 
   // ══ DELETAR (remove linha) ═══════════════════════════════
   function deletarMembro(token, id) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       var sh   = Util.getSheet(SHEET);
       var data = sh.getDataRange().getValues();
       for (var i = 1; i < data.length; i++) {
@@ -179,16 +169,18 @@ var Membros = (function () {
         }
       }
       return Util.err('Membro nao encontrado.');
-    } catch (e) {
-      Logger.log('[Membros] deletarMembro: ' + e);
-      return Util.err(e.message);
-    }
+    });
   }
 
   // ══ CORRIGIR IDs DUPLICADOS ══════════════════════════════
   // Execute uma vez pelo editor do GAS para sanar a planilha atual.
   // Percorre todas as linhas, detecta IDs inválidos (float, numérico puro,
   // vazio ou duplicado) e substitui por UUID novo.
+  //
+  // NOTA: NÃO migrado para withAuth de propósito. Esta função também é
+  // chamada manualmente sem token (mb_corrigirIdsDuplicados() → token=null)
+  // direto pelo editor do GAS. withAuth exige token válido sempre; aqui o
+  // auth precisa continuar opcional.
   function corrigirIdsDuplicados(token) {
     try {
       if (token) Auth._auth(token);
@@ -231,6 +223,8 @@ var Membros = (function () {
   }
 
   // ══ SETUP ════════════════════════════════════════════════
+  // NOTA: NÃO migrado para withAuth — mesmo motivo de corrigirIdsDuplicados
+  // (pode ser executado manualmente sem sessão pelo editor do GAS).
   function setupMembros(token) {
     try {
       if (token) Auth._auth(token);
@@ -257,8 +251,7 @@ var Membros = (function () {
   // A pasta deve ter permissão "qualquer um com o link pode ver" para exibição.
  // ══ SALVAR FOTO NO DRIVE ════════════════════════════════
   function salvarFotoMembro(token, membroId, base64Data, mimeType, nomeArquivo) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
 
       // ── Garante que o DriveApp está acessível (escopo drive) ────────
       // Se o projeto não tiver o escopo, esta linha vai lançar o erro
@@ -319,11 +312,7 @@ var Membros = (function () {
       var mime = mimeType || 'image/jpeg';
 
       return Util.ok({ fileId: fileId, base64: b64, mimeType: mime });
-
-    } catch (e) {
-      Logger.log('[Membros] salvarFotoMembro: ' + e);
-      return Util.err(e.message);
-    }
+    });
   }
 
   // ══ LER FOTO DO DRIVE COMO BASE64 ═══════════════════════
@@ -331,18 +320,14 @@ var Membros = (function () {
   // Retorna: { base64: string, mimeType: string }
   // O frontend monta: 'data:' + mimeType + ';base64,' + base64
   function getFotoMembro(token, fileId) {
-    try {
-      Auth._auth(token);
+    return withAuth(token, function(sess) {
       if (!fileId) return Util.err('fileId nao informado.');
       var file = DriveApp.getFileById(String(fileId).trim());
       var blob = file.getBlob();
       var b64  = Utilities.base64Encode(blob.getBytes());
       var mime = blob.getContentType() || 'image/jpeg';
       return Util.ok({ base64: b64, mimeType: mime });
-    } catch (e) {
-      Logger.log('[Membros] getFotoMembro: ' + e);
-      return Util.err(e.message);
-    }
+    });
   }
 
   return {

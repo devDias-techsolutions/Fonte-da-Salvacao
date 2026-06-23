@@ -50,7 +50,53 @@
   position: relative; z-index: 1; flex: 1;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 24px 20px 48px;
+  padding: 24px var(--gutter) 48px;
+}
+
+/* ── SPLIT EM COLUNAS — telas largas (notebook/desktop) ──
+   Em vez de empilhar header+card verticalmente (causa de overflow
+   em viewports baixas), distribui lado a lado. A altura total passa
+   a ser a do maior elemento, não a soma dos dois. ── */
+.login-split {
+  display: flex; flex-direction: column; align-items: center;
+  width: 100%;
+}
+.login-split-divider { display: none; }
+
+@media (min-width: 900px) {
+  .login-split {
+    flex-direction: row; align-items: center; justify-content: center;
+    gap: 56px; max-width: 920px;
+  }
+  .login-header { margin-bottom: 0; flex: 1 1 320px; max-width: 340px; }
+  .login-logo-ring, .login-logo-icon { width: 112px; height: 112px; }
+  .login-logo-ring { margin: 0 auto 26px; }
+  .login-church-name { font-size: clamp(24px, 2.6vw, 30px); }
+  .login-split-divider {
+    display: block; width: 1px; align-self: stretch;
+    background: linear-gradient(180deg, transparent, var(--border2) 20%, var(--border2) 80%, transparent);
+    min-height: 280px;
+  }
+  .login-card { flex-shrink: 0; }
+}
+
+/* ── MODO COMPACTO — viewports baixas (notebook com barras de favoritos,
+   janela não maximizada etc.) — garante que o botão "Entrar" nunca
+   fique cortado, sem depender de o usuário perceber que pode rolar.
+   Continua valendo como rede de segurança mesmo com o split acima. ── */
+@media (max-height: 760px) {
+  .login-wrapper { padding: 16px var(--gutter) 20px; }
+  .login-header  { margin-bottom: 20px; }
+  .login-logo-ring, .login-logo-icon { width: 64px; height: 64px; margin-bottom: 14px; }
+  .login-logo-ring { margin: 0 auto 14px; }
+  .login-card     { padding: 24px 24px; }
+  .login-card .field { margin-bottom: 14px; }
+  .login-card-sub { margin-bottom: 16px; }
+  .login-footer   { margin-top: 12px; }
+}
+@media (min-width: 900px) and (max-height: 760px) {
+  .login-logo-ring, .login-logo-icon { width: 80px; height: 80px; }
+  .login-split-divider { min-height: 220px; }
 }
 
 /* ── HEADER ── */
@@ -251,6 +297,8 @@ function renderLogin() {
       '<div class="login-bg-grid"></div>' +
       '<div class="login-wrapper">' +
 
+        '<div class="login-split">' +
+
         /* ── HEADER ── */
         '<div class="login-header">' +
           '<div class="login-logo-ring">' +
@@ -262,6 +310,8 @@ function renderLogin() {
           '<h1 class="login-church-name">AD Fonte da Salvação</h1>' +
           '<p class="login-church-sub">Plataforma de Gestão Ministerial</p>' +
         '</div>' +
+
+        '<div class="login-split-divider"></div>' +
 
         /* ── CARD ── */
         '<div class="login-card">' +
@@ -310,6 +360,8 @@ function renderLogin() {
           '</button>' +
 
         '</div>' + /* /login-card */
+
+        '</div>' + /* /login-split */
 
         '<div class="login-footer" style="display:flex;align-items:center;justify-content:center;gap:12px">' +
           '<span>AD Fonte da Salvação · Sistema de Gestão v1.0</span>' +
